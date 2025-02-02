@@ -1,300 +1,421 @@
 ################################################################################
-# R SCRIPT FOR SESSION 1: INTRODUCTION TO R FUNDAMENTALS
+# R SCRIPT FOR SESSION 1: INTRODUCTION TO R FUNDAMENTALS & BEST PRACTICES
 #
 # This script covers:
-#   1. Language Fundamentals
-#       - Basic syntax (expressions, statements, operators)
-#       - Variables: naming conventions, assignment operators (<-, =)
-#       - Basic mathematical operations
 #
-#   2. Data Structures Overview
-#       - Atomic vectors (numeric, character, logical, etc.)
-#       - Indexing and subsetting (vectors, lists, matrices) with numeric or logical indices
-#       - Lists and nested lists
-#       - Factors and their role in categorical data
-#       - Matrices and arrays (dimension reduction)
-#       - Data frames vs. tibbles
+# 1. RStudio Interface & Workflow
+# 2. Language Fundamentals
+#    - Basic syntax (expressions, statements, operators)
+#    - Variables and assignment (<-, =)
+#    - Naming conventions for variables and functions
+#    - Basic mathematical operations
 #
-#   3. Finding Help and Documentation
-#       - Using ? and help()
-#       - Vignettes and package manuals
-#       - Online resources (CRAN, Bioconductor, RStudio Community)
+# 3. Data Structures Overview
+#    - Atomic vectors (numeric, character, logical, etc.) and subsetting
+#    - Lists and nested lists
+#    - Factors for categorical data
+#    - Matrices and arrays (including indexing and dimension reduction)
+#    - Data frames vs. tibbles: similarities and differences
 #
-#   4. Working with Packages
-#       - Installing packages (install.packages, BiocManager)
-#       - Loading and updating packages (library, require, update.packages)
-#       - Package directories and version management
+# 4. Vectorized Operations & Sequence Generation
+#    - Element-wise operations on vectors and matrices
+#    - Generating sequences with :, seq(), seq_along(), seq_len(), rep()
+#
+# 5. Finding Help and Documentation
+#    - Using ? and help() to find documentation
+#    - Searching topics with ??
+#
+# 6. Working with Packages
+#    - Installing packages (install.packages, BiocManager for Bioconductor)
+#    - Loading and updating packages (library, require, update.packages)
+#
+# 7. Additional Topics & Best Practices
+#    - Working with files and directories (getwd, setwd)
+#    - Basic plotting, debugging tips, and code organization
 #
 # INSTRUCTIONS:
 #   1. Open this script in RStudio.
 #   2. Run each code section step by step to see outputs in the console.
 #   3. Look for "TASK" comments and complete the mini-exercises.
+#
+# Suggestions for additional topics in future sessions:
+#   - Control Structures: if/else, for loops, while loops, and vectorized alternatives.
+#   - Writing and Debugging Functions: creating, testing, and documenting your own functions.
+#   - Data Import/Export: reading from files (CSV, Excel) and writing output.
+#   - Advanced Data Manipulation: an introduction to dplyr, tidyr, and other tidyverse packages.
 ################################################################################
 
-# ================================ 1. BASICS ===================================
+########################### 0. RSTUDIO & WORKFLOW ###############################
+# A. RStudio Interface & Workflow:
+#    - Console: where commands are executed.
+#    - Script Editor: where you write and save your code.
+#    - Environment/History Pane: lists variables and past commands.
+#    - Plots/Files/Help Pane: displays plots, files, and help documentation.
+#
+# B. Working with Files:
+#    - Use getwd() to see your current working directory.
+#    - Use setwd("your/path/here") to change your working directory.
+#
+# TASK (Optional):
+#   1. Run getwd() to check your current directory.
+#   2. (If desired) Change it using setwd().
+
+getwd()
+# setwd("C:/your/path/here")  # Uncomment and modify this line to change your working directory.
+
+######################## 1. LANGUAGE FUNDAMENTALS ##############################
 
 # --- 1.1 Basic Syntax, Operators, and Statements ---
+2 + 2                     # Simple arithmetic expression.
+print(2 + 2)              # Using print() to display the result.
 
-# Below is a simple arithmetic expression in R.
-# You can select the line and press Ctrl + Enter (Windows) or Cmd + Enter (Mac)
-# to run it in RStudio.
+# TASK 1: Modify the expression below to multiply 8 by 5 instead of 8 by 4.
+8 * 4  # Modify this expression accordingly.
 
-2 + 2
+# --- 1.2 Variables, Assignment & Naming Conventions ---
+x <- 10        # Preferred assignment operator in R.
+y = 5          # Also valid, but the "<-" operator is more common in the R community.
 
-# You can also wrap expressions in the print() function to display them:
-print(2 + 2)
+# Best practices:
+# - Use descriptive names (e.g., total_score instead of ts).
+# - Use lowercase letters and underscores to separate words.
+# - Function names often use a verb-noun pattern (e.g., calculate_mean).
 
-# By default, R prints the result of any expression you evaluate in the console.
-# There's no need for an explicit statement terminator like semicolons
-# (though you can use them, it's not common in R).
+z <- x + y     # Variables can be used in arithmetic operations.
+z              # Simply typing the variable name prints its value.
 
-# TASK 1: Change the expression below to multiply 8 by 5 instead of 8 by 4.
-8 * 4
-
-
-# --- 1.2 Variables and Assignment ---
-
-# In R, you can assign values to variables using the "<-" or "=" operator.
-x <- 10       # This is the most common way in R
-y = 5         # This also works, but "<-" is preferred in most style guides
-
-# Now we can operate on these variables:
-z <- x + y
-z
-
-# Variable naming conventions:
-# - Start with a letter (a-z, A-Z) or dot (.), but not a number.
-# - Avoid using reserved words like if, else, for, in, etc.
-# - Use meaningful names for readability.
-
-# TASK 2: Create a new variable called "height" that stores the value 1.85.
-# Then print it to the console.
-
+# TASK 2: Create a variable named "height" with the value 1.85 and print it.
 
 # --- 1.3 Basic Mathematical Operations ---
+sum_xy   <- x + y   # Addition.
+diff_xy  <- x - y   # Subtraction.
+prod_xy  <- x * y   # Multiplication.
+quot_xy  <- x / y   # Division.
+expo_xy  <- x^2     # Exponentiation.
 
-# R can do a variety of math operations out of the box:
-sum_xy <- x + y
-diff_xy <- x - y
-prod_xy <- x * y
-quot_xy <- x / y
-expo_xy <- x^2
+print(sum_xy)
+print(diff_xy)
+print(prod_xy)
+print(quot_xy)
+print(expo_xy)
 
-print(sum_xy)   # Summation
-print(diff_xy)  # Difference
-print(prod_xy)  # Product
-print(quot_xy)  # Division
-print(expo_xy)  # Exponentiation
+# Using built-in functions:
+sqrt_x <- sqrt(x)   # Square root of x.
+log_x  <- log(x)    # Natural logarithm of x.
+exp_x  <- exp(y)    # Exponential function applied to y.
 
-# R also has built-in mathematical functions like sqrt(), log(), exp(), sin(), etc.
-sqrt_x <- sqrt(x)
-log_x <- log(x)      # natural log by default
-exp_x <- exp(y)
+# TASK 3: Print sqrt_x, log_x, and exp_x. Then, try changing x or y and re-run.
 
-# TASK 3: Print out sqrt_x, log_x, and exp_x. Then try changing x or y
-# to see how the results change.
-
-
-# ================================ 2. DATA STRUCTURES ==========================
+######################## 2. DATA STRUCTURES OVERVIEW ###########################
 
 # --- 2.1 Atomic Vectors ---
-
-# The simplest R data structure is a vector, which can contain elements of the
-# same type (numeric, character, logical, etc.).
-
-numeric_vec <- c(1, 2, 3, 4)                   # numeric vector
-char_vec <- c("apple", "banana", "cherry")     # character vector
-log_vec <- c(TRUE, FALSE, TRUE)                # logical vector
+# Vectors are the simplest R data structures and can store elements of a single type.
+numeric_vec <- c(1, 2, 3, 4)                      # Numeric vector.
+char_vec    <- c("apple", "banana", "cherry", "cherry")  # Character vector.
+log_vec     <- c(TRUE, FALSE, TRUE)               # Logical vector.
 
 print(numeric_vec)
 print(char_vec)
 print(log_vec)
 
-# TASK 4: Create a vector named my_vec that contains three numbers of your choice.
-
+# TASK 4: Create a vector "my_vec" with three numbers of your choice.
 
 # --- 2.1.1 Indexing and Subsetting Vectors ---
-
-# R indexing is 1-based (the first element is at index 1).
-# Numeric indexing:
-numeric_vec[1]          # first element
-numeric_vec[1:3]        # first three elements
-numeric_vec[c(1, 4)]    # the 1st and 4th elements
+# R uses 1-based indexing.
+numeric_vec[1]          # First element of numeric_vec.
+numeric_vec[1:3]        # Elements from first to third.
+numeric_vec[c(1, 4)]    # First and fourth elements.
 
 # Logical indexing:
-# - If you provide a logical vector of the same length, TRUE indicates that
-#   you want that element, FALSE indicates that you don't.
 is_large <- numeric_vec > 2
-is_large
-numeric_vec[is_large]   # returns elements where numeric_vec > 2
+is_large                # Logical vector indicating which elements are greater than 2.
+numeric_vec[is_large]   # Returns elements where the condition is TRUE.
+numeric_vec[numeric_vec > 2]  # Concise logical indexing.
+numeric_vec[-2]         # Returns all elements except the second.
 
-# Negative indexing removes elements:
-numeric_vec[-2]         # all elements except the 2nd
-
+# Additional functions for accessing elements:
+head(numeric_vec)       # Returns the first few elements of numeric_vec.
+tail(numeric_vec)       # Returns the last few elements of numeric_vec.
 
 # --- 2.2 Lists and Nested Lists ---
-
-# Lists can hold objects of different types and different lengths.
+# Lists can store elements of different types.
 my_list <- list(name = "Sample", numbers = numeric_vec, flag = TRUE)
-my_list
+print(my_list)
+print(my_list$name)            # Access element using the $ operator.
+print(my_list[["numbers"]])    # Alternative access using double brackets.
 
-# You can access elements of a list with:
-my_list$name        # $ operator
-my_list[["numbers"]]
-
-# Notice the difference between using single brackets [] vs. double brackets [[]]:
-my_list[1]          # returns a sub-list containing the first element
-my_list[[1]]        # returns the actual first element (e.g., "Sample")
-
-# TASK 5: Add another item to my_list with the name "my_char" that stores char_vec.
-# Hint: you can do something like: my_list$my_char <- char_vec
-
+# TASK 5: Add a new element "my_char" to my_list that stores char_vec.
 
 # --- 2.3 Factors ---
-
-# Factors are used to represent categorical data (levels) in R.
-# They store data as integers with labels.
+# Factors represent categorical data with predefined levels.
 fruit_factor <- factor(char_vec)
-fruit_factor
+print(levels(fruit_factor))     # Unique levels (categories) in the factor.
+print(fruit_factor)
+print(as.integer(fruit_factor)) # Underlying integer codes.
 
-# Check the internal integer representation:
-as.integer(fruit_factor)
-
-# Notice that "apple", "banana", and "cherry" are treated as distinct levels.
-
-# TASK 6: Create a factor named condition_factor with levels "Control" and "Treatment",
-# and assign it a small vector of values like c("Control", "Treatment", "Control").
-
+# TASK 6: Create a factor "condition_factor" with levels "Control" and "Treatment"
+# and assign it a small vector (e.g., containing "Control", "Treatment", "Control").
 
 # --- 2.4 Matrices and Arrays ---
-
-# A matrix is a 2D data structure of the same type.
+# Matrices are 2-dimensional arrays; arrays can have more dimensions.
 my_matrix <- matrix(1:9, nrow = 3, ncol = 3)
-my_matrix
+print(my_matrix)
 
-# You can also create arrays with more dimensions:
-my_array <- array(1:12, dim = c(2, 2, 3))
-my_array
+# Creating a matrix filled by rows:
+my_matrix2 <- matrix(1:9, nrow = 3, ncol = 3, byrow = TRUE)
+print(my_matrix2)
 
-# Indexing works similarly, but now we use row and column indices (or more):
-my_matrix[1, 2]   # element in row 1, col 2
-my_matrix[2, ]    # entire 2nd row
-my_matrix[, 3]    # entire 3rd column
+# Accessing elements by row and column indices:
+print(my_matrix[1, 2])  # Element at row 1, column 2.
+print(my_matrix[2, ])   # Entire second row.
+print(my_matrix[, 3])   # Entire third column.
 
-# Dimension reduction: When you subset rows or columns, R drops that dimension
-# by default. For example:
+# Dimension reduction: R returns the simplest possible structure by default.
 row2 <- my_matrix[2, ]
-# row2 is now a vector, not a matrix. If you want to preserve the 2D structure:
+row2
+# Use drop = FALSE to preserve matrix structure:
 row2_as_matrix <- my_matrix[2, , drop = FALSE]
+row2_as_matrix
 
-# TASK 7: Print the second row of my_matrix (store it in a new variable).
-# Then print the element in row 2, column 3 of my_matrix.
-# Try using drop = FALSE and see the difference.
+# TASK 7: Store the second row of my_matrix in a variable and then print
+# the element at row 2, column 3. Experiment with drop = FALSE.
 
+# Matrix transposition:
+transposed_matrix <- t(my_matrix)
+print(my_matrix)
+print(transposed_matrix)
 
 # --- 2.5 Data Frames and Tibbles ---
-
-# A data frame is a list of vectors of equal length (like a spreadsheet).
+# Data frames are lists of equal-length vectors (similar to spreadsheets).
 my_df <- data.frame(
-  ID = 1:3,
-  fruit = c("apple", "banana", "cherry"),
-  quantity = c(10, 5, 7)
+  ID       = 1:4,
+  fruit    = c("apple", "banana", "cherry", "cherry"),
+  quantity = c(10, 5, 7, 5)
 )
-my_df
+print(my_df)
 
-# Tibbles (from the tibble package) are a modern version of data frames
-# with some nicer printing features, but structurally they're similar.
+# Access columns in various ways:
+print(my_df$fruit)         # Using the $ operator.
+print(my_df[["fruit"]])    # Using double brackets.
+print(my_df[, "fruit"])    # Using the column name.
+print(my_df[, 2])          # Using the column index.
 
-# To create a tibble, you need the tibble or tidyverse package installed.
-# We'll do the installation demonstration in the "Working with Packages" section.
-# For now, here's how you'd create one if the package is installed:
-# library(tibble)
-# my_tibble <- tibble(
-#   ID = 1:3,
-#   fruit = c("apple", "banana", "cherry"),
-#   quantity = c(10, 5, 7)
-# )
-# my_tibble
+# Adding a new column to the data frame:
+my_df$price <- c(2.5, 1.8, 3.2, 3.5)
+print(my_df)
 
-# TASK 8: Print the structure of my_df using the str() function.
-# Then use the $ operator to print the "fruit" column only.
+# subsetting data frames
+print(my_df[my_df$quantity > 5, ])
+print(subset(my_df, quantity > 5))
 
 
-# ====================== 3. FINDING HELP AND DOCUMENTATION =====================
+# TASK 8: Use str(my_df) to view the structure of the data frame;
+# then, print the "fruit" column using the $ operator.
 
-# You can use ? or help() to get help on a function.
-# For example, try:
-?mean
-# or
-help(mean)
+# TASK 8.1 Select all rows where fruit is "cherry" and print the result.
 
-# Many packages include "vignettes", which are longer-form documentation.
-# For example, if you have "dplyr" installed, you can see:
-# vignette("dplyr")
+################### 3. VECTORIZED OPERATIONS & SEQUENCE GENERATION ###############
 
-# Online resources include:
-# - CRAN: https://cran.r-project.org/
-# - Bioconductor: https://bioconductor.org/
-# - RStudio Community: https://community.rstudio.com/
+# Vectorized operations allow operations on whole vectors without explicit loops.
+# Example: measurements for two conditions.
+condition_A <- c(2.1, 3.4, 6.5, 7.9, 10.2)
+condition_B <- c(1.5, 2.3, 5.9, 8.0, 9.8)
 
-# TASK 9: Run ?plot and read the documentation in the Help pane.
+# Element-wise arithmetic operations:
+sum_AB   <- condition_A + condition_B   # Sum corresponding elements.
+diff_AB  <- condition_A - condition_B   # Difference for each element.
+ratio_AB <- condition_A / condition_B   # Ratio of corresponding elements.
 
-# In addition to ?function_name (e.g., ?mean), you can search for topics with ??.
-# For instance:
-# ??anova
-#
-# This will search for all help pages that mention "anova" in the title or
-# description across installed packages.
-#
-# TASK 6:
-#   1. Try using ??plot (or ??factor) to see what results come up.
-#   2. Check some of the help pages that appear.
+print(sum_AB)
+print(diff_AB)
+print(ratio_AB)
 
+# TASK 9: Multiply condition_A and condition_B element-wise and print the result.
 
-# ============================ 4. WORKING WITH PACKAGES ========================
+# Calculate summary statistics:
+mean_A <- mean(condition_A)
+sd_A   <- sd(condition_A)
+print(mean_A)
+print(sd_A)
 
-# --- 4.1 Installing Packages ---
+mean_sum  <- mean(sum_AB)
+mean_diff <- mean(diff_AB)
 
-# To install packages from CRAN, use install.packages("package_name").
-# For example, to install the "tidyverse" meta-package:
+# TASK 10: Print mean_sum and mean_diff.
+# Also, calculate the mean for condition_B and compare the results.
+
+# --- Matrix Operations ---
+set.seed(123)  # For reproducibility.
+count_matrix <- matrix(sample(10:100, 12, replace = TRUE), nrow = 3, ncol = 4)
+print(count_matrix)
+
+# Arithmetic on matrices:
+print(count_matrix + 5)   # Add 5 to every element.
+print(count_matrix * 2)   # Multiply every element by 2.
+
+another_matrix <- matrix(sample(10:100, 12, replace = TRUE), nrow = 3, ncol = 4)
+print(count_matrix + another_matrix)
+
+# Recycling example:
+print(count_matrix + c(0.1, 0.2, 0.3))
+print(count_matrix + c(0.1, 0.2, 0.3, 0.4))
+print(count_matrix + c(0.1, 0.2, 0.3, 0.4, 0.5))
+
+# TASK 11: Subtract another_matrix from count_matrix and print the result.
+# Identify which elements become negative and consider why.
+
+# Row-wise and Column-wise operations:
+print(rowSums(count_matrix))
+print(colSums(count_matrix))
+print(rowMeans(count_matrix))
+print(colMeans(count_matrix))
+
+# TASK 12: Save rowSums to a new variable and print it.
+# Also, save colSums, rowMeans, and colMeans to separate variables and print them.
+
+# --- Matrix Multiplication (Optional) ---
+mat1 <- count_matrix          # 3x4 matrix.
+mat2 <- matrix(1:8, nrow = 4, ncol = 2)  # 4x2 matrix.
+mat_mult <- mat1 %*% mat2
+print(mat_mult)
+# TASK 13 (Challenge): Print mat_mult and explain in comments why its dimensions are 3x2.
+
+# --- Generating Sequences ---
+# Colon operator: creates a sequence of integers.
+sequence1 <- 1:10
+print(sequence1)
+# TASK 14: Create and print a sequence from 5 to 15 using the colon operator.
+
+# seq() function: allows more control over sequence generation.
+sequence2 <- seq(from = 0, to = 1, by = 0.2)
+print(sequence2)
+sequence3 <- seq(from = 0, to = 1, length.out = 6)
+print(sequence3)
+# TASK 15: Generate a sequence from 10 to 20 with a step size of 2 using seq().
+
+# seq_along() function: generates a sequence along the length of an object.
+example_vector <- c("a", "b", "c", "d")
+sequence4 <- seq_along(example_vector)
+print(sequence4)
+# TASK 16: Create a vector of 5 colors and use seq_along() to generate their indices.
+
+# seq_len() function: creates a sequence of a specified length.
+sequence5 <- seq_len(7)
+print(sequence5)
+# TASK 17: Create a sequence of length 10 using seq_len() and print it.
+
+# --- Using the rep() Function ---
+# The rep() function replicates the values in a vector.
+repeated_seq <- rep(1:3, times = 3)  # Replicates 1, 2, 3 three times.
+print(repeated_seq)
+# TASK (Optional): Modify the rep() function to create a different pattern.
+
+######################## 4. FINDING HELP & DOCUMENTATION #######################
+
+# --- Basic Help ---
+?mean        # Opens the help page for the mean() function.
+help(mean)   # Alternative method to access documentation.
+
+# --- Searching for Help with ?? ---
+# ??anova   # Searches for help related to analysis of variance.
+# TASK 18: Run ?plot and read the documentation in the Help pane.
+# TASK 19: Try using ??plot (or ??factor) to explore related topics.
+
+######################## 5. WORKING WITH PACKAGES ###############################
+
+# --- Installing Packages ---
 # install.packages("tidyverse")
-
-# Bioconductor packages are installed via BiocManager:
+#
+# For Bioconductor packages:
 # if (!requireNamespace("BiocManager", quietly = TRUE))
 #     install.packages("BiocManager")
 # BiocManager::install("GenomicRanges")
 
-# NOTE: Installing packages requires an internet connection and may take time.
-
-# --- 4.2 Loading and Updating Packages ---
-
-# After installation, you load a package with library() or require().
+# --- Loading and Updating Packages ---
 # library(tidyverse)
-
-# To update installed packages, use:
 # update.packages()
 
-# --- 4.3 Package Directories and Version Management ---
+# --- Checking Package Libraries ---
+print(.libPaths())
 
-# R installs packages into a library directory. You can check which directories
-# are used for libraries with .libPaths().
-
-# TASK 10: If you have an internet connection, try installing the "stringr" package
-# (part of the tidyverse) by removing the comment below and running it.
+# TASK 20: (Requires an internet connection)
+#   1. Uncomment the install.packages() call below to install "stringr".
+#   2. Load it using library(stringr) and check its help page using ?str_detect.
 # install.packages("stringr")
-
-# Then load it:
 # library(stringr)
+# ?str_detect
 
-# TASK 11: Use ?str_detect (from stringr) to open the help and see how to use
-# the function. Try a simple example.
+#################### 6. ADDITIONAL TOPICS & BEST PRACTICES #######################
+
+# --- Working with Files & Directories ---
+print(getwd())
+
+# --- Basic Plotting ---
+x_values <- 1:40
+y_values <- x_values^2  # Squaring each x value.
+plot(x_values, y_values, type = "b", col = "blue",
+     main = "Simple Plot of x vs. x^2",
+     xlab = "x", ylab = "x squared")
+# TASK 21: Modify the plot by changing the color and type to see how the plot changes.
+
+# --- Debugging Tips ---
+# When you encounter errors:
+#   - Read the error message carefully.
+#   - Use traceback() immediately after an error to see the call stack.
+#   - Use browser() inside functions to debug step-by-step.
+#
+# Example (uncomment to test):
+# faulty_function <- function() {
+#   stop("This is an intentional error for demonstration.")
+# }
+# faulty_function()
+# traceback()
+
 
 ################################################################################
-# END OF SCRIPT
-#
-# Additional Tips:
-#   - Keep scripts organized with headings and comments.
-#   - Experiment with each example and see what happens if you change values.
-#   - Refer to official documentation when you encounter a new function.
-#
+#        Geting data from Excel or LibreOffice Calc to R
 ################################################################################
+# Open file data/toothgrowth.xlsx in Libre Office Calc
+# this file contains data on tooth growth in guinea pigs
+# under different supplementations # with vitamin C
+# in form of Orange Juice or Ascorbic Acid
+
+
+# save it in text/csv format, select field delimiter. It could be
+# comma or Tab delimited, In this example we will use Tab delimited:
+# import the data into R
+# Read the tab-delimited file into a data frame.
+# - header = TRUE tells R that the first row contains column names.
+# - sep = "\t" specifies that the fields are separated by tabs.
+tooth_growth <- read.table("exported_data.txt",
+                   header = TRUE,    # First row has column names.
+                   sep = "\t",       # Tab-delimited file.
+                   stringsAsFactors = FALSE)  # Do not convert text to factors.
+
+# Check the first few rows to ensure the data is imported correctly.
+head(tooth_growth)
+str(tooth_growth)
+summary(tooth_growth)
+# plot dose vs length
+# Create a scatter plot with:
+# - x-axis: dose
+# - y-axis: length
+plot(tooth_growth$dose, tooth_growth$len,
+     xlab = "Dose (mg/day)",
+     ylab = "Tooth Length",
+     main = "Tooth Growth in Guinea Pigs")
+
+
+
+
+
+
+
+
+# Plotting demonstration 1: see script 01_example_1.R for a detailed example.
+
+# Plotting demonstration 2: see script 01_example_2.R for a detailed example.
+
+
+
+

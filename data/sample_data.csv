@@ -1,0 +1,11 @@
+ID,Species,Height,Leaf_Count,Treatment
+1,Species_A,15.2,25,Control
+2,Species_B,18.5,30,Treatment
+3,Species_A,14.7,22,Treatment
+4,Species_B,19.3,32,Control
+5,Species_A,16.1,28,Control
+6,Species_B,20.0,35,Treatment
+7,Species_A,15.8,26,Treatment
+8,Species_B,18.8,31,Control
+9,Species_A,16.3,27,Control
+10,Species_B,19.7,33,Treatment
