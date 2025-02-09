@@ -7,6 +7,7 @@
 ### Navigating RStudio 
 - Overview of the RStudio interface: console, editor, environment, plots, and help panes
 - https://docs.posit.co/ide/user/ide/guide/ui/ui-panes.html
+- https://www.youtube.com/watch?v=T44GWKlFFRI&t=6s
 - Customizing the workspace (themes, layouts, etc.)
 - Setting the working directory
 
@@ -41,9 +42,7 @@
 
 - Package directories and version management
 
-
 ---
-
 
 ## Importing and Manipulating Tabular Data 
 
