@@ -130,4 +130,4 @@ plot(diet2_data$Time, diet2_data$weight,
  
 - **Script File:**  Save your completed assignment in an R script file (e.g., `chick_weight_assignment.R`). 
 - **Error-Free:**  Ensure your script runs without errors and that each task produces the expected output.
-- ** send me a emails with the script attached** 
+- Send me a emails with the script attached 
