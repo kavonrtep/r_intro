@@ -57,7 +57,7 @@ This outline covers the essential topics for introducing RStudio. It is designed
 - **Executing Code:**
   - Run a single line with the **Run** button or using **Command/Ctrl + Enter**.
   - Show how multiple lines can be run by highlighting them before executing.
-  - **Arrow up in consose** shows previouse commands
+  - **Arrow up in consose** shows previous commands
 - **Observing Results:**
   - Point out how variables appear in the Global Environment.
   - Explain how the Console displays the output.
@@ -76,24 +76,21 @@ This outline covers the essential topics for introducing RStudio. It is designed
 ## 8. Working with Files and Directories
 
 - **Managing Files:**
-  - Use the Files tab to navigate directories.
+  - Use the Files tab to navigate directories. (before we have to downoad r_intro from github)
 - **Setting the Working Directory:**
   - Demonstrate setting the working directory via **More > Set Working Directory** or by using the command (e.g., `setwd("path/to/directory")`).
 - **Reading Data:**
   - Example: `read.csv("mydata.csv")`
   - Show how to assign the read data to a variable and view it in the Environment pane.
-
-## 9. Managing Packages
-
-- **Installing Packages:**
-  - Use `install.packages("package_name")`.
-  - Highlight RStudio’s autocompletion features when typing function names.
+ 
 - **Accessing Documentation:**
+  - Highlight RStudio’s autocompletion features when typing function names (use `read.csv` as an example).
+  - Show F1 for help on the function under the cursor.
   - Use `?function_name` and `??partial_name` to search for help.
 - **Activating Packages:**
   - Demonstrate using the Packages tab (checking the box) or via `library(package_name)`.
 
-## 10. Plotting with Package Data
+## 10. Plotting with Package Data -SKIP THIS
 
 - **Example with an External Package:**
   - Remove and then install a package (e.g., "nycflights13") to show how to install packages.
