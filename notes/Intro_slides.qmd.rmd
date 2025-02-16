@@ -136,3 +136,71 @@ fig <- fig %>% layout(scene = list(xaxis = list(title = 'Weight'),
 
 fig
 ```
+## Basic R Syntax
+
+- Comments: `#`
+- Assignment: `<-` or `=` (preferred is `<-`)
+
+```{r}
+#| echo: true
+#| include: true
+# this is a comment
+x <- 5
+```
+## Basic R Syntax
+- Data types: numeric, character, logical
+```{r}
+#| echo: true
+#| include: true
+x <- 5
+y <- "hello"
+z <- TRUE
+```
+## Basic R Syntax
+- Vectors: `c()`
+- Matrices: `matrix()`
+```{r}
+#| echo: true
+#| include: true
+x <- c(1, 2, 3)
+print(x)
+y <- matrix(1:9, nrow = 3)
+print(y)
+```
+## Basic R Syntax
+
+- Data frames: `data.frame()`
+```{r}
+#| echo: true
+#| include: true
+print(head(iris))
+
+```
+## Basic R Syntax
+
+- Lists: `list()`
+
+```{r}
+#| echo: true
+#| include: true
+x <- list(1, "hello", TRUE)
+print(x)
+```
+## Basic R Syntax
+- Functions: `function()`, Calling functions: `function_name()`
+- Arguments: `function_name(arg1 = value1, arg2 = value2)`
+```{r}
+#| echo: true
+#| include: true
+x <- mean(c(1, 2, 3))
+print(x)
+y <- t.test(x = c(1, 2, 3), y = c(4, 5, 6))
+print(y)
+```
+## Basic R Syntax
+- Control structures: `if`, `else`, `for`, `while`
+- Packages: `library()`, `install.packages()`
+- Help: `?`, `example()`, `vignette()`
+
+
+
