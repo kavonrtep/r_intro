@@ -3,20 +3,20 @@ title: "RStudio Introduction Outline"
 author: "Instructor Notes"
 format: html
 ---
-
 # RStudio Introduction Outline
 
 This outline covers the essential topics for introducing RStudio. It is designed to ensure that all key points are discussed during the session.
 
 ## 1. Introduction
-    - Install RStudio.
-    - Navigate the RStudio interface.
-    - Write and execute R code.
-    - Create and export plots.
-    - Create interactive documents using Quarto.
-    - Customize the RStudio appearance.
 
+- Install RStudio.
+- Navigate the RStudio interface.
+- Write and execute R code.
+- Create and export plots.
+- Create interactive documents using Quarto.
+- Customize the RStudio appearance.
 ## 2. What is RStudio?
+
 - **Definition**: An Integrated Development Environment (IDE) for R.
 - **Main Components/Windows:**
   - **Code Editor**: Where you write R scripts.
@@ -26,6 +26,7 @@ This outline covers the essential topics for introducing RStudio. It is designed
 - **Comparison**: Unlike a basic setup (separate code editor and console), RStudio brings all these elements together in one interface.
 
 ## 3. Installing RStudio
+
 - **Steps:**
   - Visit the RStudio website.
   - Download the appropriate installer for your platform.
@@ -33,12 +34,14 @@ This outline covers the essential topics for introducing RStudio. It is designed
 - **Prerequisite**: R must already be installed on your computer.
 
 ## 4. Navigating the RStudio Interface
+
 - **Starting an R Script:**
   - Go to **File > New File > R Script** to open the code editor.
 - **Overview of the Interface:**
   - Identify the four main panels: Code Editor, Console, Environment/Workspace, and the combined Plots/Files/Packages/Help window.
 
 ## 5. Customizing Appearance
+
 - **Changing Themes:**
   - Access **RStudio Preferences > Appearance**.
   - Select an editor theme (various background, syntax highlighting, and font color options).
@@ -47,27 +50,31 @@ This outline covers the essential topics for introducing RStudio. It is designed
   - Rearrange panels (e.g., move the Console or Files pane) to suit your workflow.
 
 ## 6. Writing and Running R Code
+
 - **Creating Variables:**
   - Demonstrate assigning a vector to variables (e.g., `x` and `y`).
   - Introduce the useful keyboard shortcut for the assignment operator (Option/Alt + `-`).
 - **Executing Code:**
   - Run a single line with the **Run** button or using **Command/Ctrl + Enter**.
   - Show how multiple lines can be run by highlighting them before executing.
+  - **Arrow up in consose** shows previouse commands
 - **Observing Results:**
   - Point out how variables appear in the Global Environment.
   - Explain how the Console displays the output.
 
 ## 7. Plotting in RStudio
+
 - **Creating a Basic Plot:**
   - Example: `plot(x, y)`
 - **Modifying the Plot:**
-  - Change parameters (e.g., `type="b"` for both points and lines).
+  - Change parameters (e.g., `type="b"` for both points and lines)
 - **Plot Navigation and Export:**
   - Use the arrows to review multiple plots.
   - Demonstrate the zoom feature.
   - Explain how to export plots as images or PDFs.
 
 ## 8. Working with Files and Directories
+
 - **Managing Files:**
   - Use the Files tab to navigate directories.
 - **Setting the Working Directory:**
@@ -77,6 +84,7 @@ This outline covers the essential topics for introducing RStudio. It is designed
   - Show how to assign the read data to a variable and view it in the Environment pane.
 
 ## 9. Managing Packages
+
 - **Installing Packages:**
   - Use `install.packages("package_name")`.
   - Highlight RStudio’s autocompletion features when typing function names.
@@ -86,13 +94,16 @@ This outline covers the essential topics for introducing RStudio. It is designed
   - Demonstrate using the Packages tab (checking the box) or via `library(package_name)`.
 
 ## 10. Plotting with Package Data
+
 - **Example with an External Package:**
   - Remove and then install a package (e.g., "nycflights13") to show how to install packages.
   - Activate the package and explore a dataset (e.g., the `flights` data).
   - Create a histogram (or other plot) from a column in the dataset.
 
 ## 11. Creating Quarto Documents
+
 *Note: This section updates the original “R Notebook” instructions.*
+
 - **What is a Quarto Document?**
   - A modern document format similar to R Markdown that allows interactive code chunks.
 - **Creating a New Quarto Document:**
@@ -108,6 +119,7 @@ This outline covers the essential topics for introducing RStudio. It is designed
   - Useful for teaching, reporting, and reproducible analysis.
 
 ## 12. Summary and Additional Resources
+
 - **Recap:**
   - Installation and basic navigation of RStudio.
   - Writing and running R code.
