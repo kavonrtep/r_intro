@@ -37,9 +37,7 @@
 ### Working with Packages 
  
 - Installing packages (`install.packages`, BiocManager for Bioconductor)
- 
 - Loading and updating packages (`library`, `require`, `update.packages`)
-
 - Package directories and version management
 
 ---
@@ -49,27 +47,22 @@
 ### Reading Data 
  
 - Reading CSV, TSV, and other delimited files (`read.csv`, `read.delim`, `readr` package)
- 
 - Reading Excel files (`readxl` package)
-
 - Reading data from the clipboard and online resources
 
 ### Data Frames and Tibbles 
 
 - Converting between data frames and tibbles
- 
 - Inspecting data (head, tail, `str`, `summary`)
 
 ### Data Export 
 
 - Writing CSV, TSV, and Excel files
-
 - Exporting to other formats (TXT, RDS, RData)
 
 ### Handling Missing Data 
  
 - Identifying missing values (`NA`, `NaN`)
-
 - Strategies for imputation or filtering
 
 
