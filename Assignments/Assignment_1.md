@@ -35,6 +35,7 @@ or
 ```R
 diet1_data <- subset(ChickWeight, Diet == 1)
 ```
+
 </details>
 
 2. **Subset for the Final Time Point:**  
@@ -52,6 +53,7 @@ Use a similar approach as before, for example:
 diet1_time21 <- diet1_data[diet1_data$Time == 21, ]
 ```
 </details>
+
 
 ---
 
