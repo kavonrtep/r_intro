@@ -43,5 +43,18 @@ Columns include:
 6. `strand` - strand (optional)
 
 
+## feature_counts.csv
 
+A tab-delimited file containing gene expression counts from an RNA-seq experiment.
+Columns names are sample names and row names are gene names. Values are integer counts.
+This dataset is accompanied by a feature annotation file `feature_annotation.csv`. Annotation file contains gene annotations including a `gender` column.
 
+```txt
+        num.tech.reps population      study gender
+NA06985             1        CEU Montgomery female
+NA06986             1        CEU Montgomery   male
+NA06994             1        CEU Montgomery   male
+NA07000             1        CEU Montgomery female
+NA07037             1        CEU Montgomery female
+NA07051             1        CEU Montgomery   male
+```

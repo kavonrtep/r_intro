@@ -103,16 +103,14 @@
 
 - Return values
 
-- Documentation with Roxygen2 (intro)
 
-### Debugging 
+### Debugging (optional) 
 
 - Common errors and warnings
  
 - Using `traceback()`, `browser()`, `debug()`, and `recover()`
 
 - Strategies for troubleshooting
-
 
 ---
 

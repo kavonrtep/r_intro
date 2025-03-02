@@ -1,0 +1,277 @@
+---
+title: "R introduction"
+format: revealjs
+editor: visual
+---
+
+# Control Structures
+
+- `if` and `else`: testing a condition and acting on it
+
+- `for`: execute a loop a fixed number of times
+
+- `while`: execute a loop _while_ a condition is true
+
+- `repeat`: execute an infinite loop (must `break` out of it to stop)
+
+- `break`: break the execution of a loop
+
+- `next`: skip an interation of a loop
+
+
+
+
+## Control Structures: if-else
+
+```{R}
+#| echo: true
+#| include: true
+#| eval: false
+if (<condition>) {
+  <statements>
+  # do something
+} else {
+  <statements>
+  # do something else
+}
+```
+
+Example:
+```{r}
+#| echo: true
+#| include: true
+x <- 10
+if (x > 5) {
+  print("x is greater than 5")
+} else {
+  print("x is less than or equal to 5")
+}
+```
+## Control Structures: for loop
+For loops are used to iterate over a sequence of values.
+```{R}
+#| echo: true
+#| include: true
+#| eval: false
+for (i in <sequence>) {
+  <statements>
+}
+```
+Example:
+```{r}
+#| echo: true
+#| include: true
+for (i in 1:5) {
+  print(i)
+}
+```
+## Control Structures: for loop
+For loops can be used to iterate over a vector.
+
+```{r}
+#| echo: true
+#| include: true
+x <- seq(0, 1, by = 0.3)
+for (i in x) {
+  print(i)
+}
+```
+Alternativelly we can iterate over indices.
+```{r}
+#| echo: true
+#| include: true
+for (i in seq_along(x)) {
+  cat(i, x[i], "\n")
+}
+```
+## Nested loops
+```{r}
+#| echo: true
+#| include: true
+mat <- matrix(1:6, nrow = 3)
+print(mat)
+for (i in seq_len(nrow(mat))) {
+  for (j in seq_len(ncol(mat))) {
+    print(mat[i, j])
+  }
+}
+```
+## Other types of loops
+- `while` loops: execute a loop while a condition is true
+- `repeat` loops: execute an infinite loop
+- `next` skips the current iteration
+- `break` exits the loop
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+while (<condition>) {
+  <statements>
+}
+
+repeat {
+  <statements>
+  if (<condition>) {
+    break
+  }
+}
+```
+## Vectorized operations
+- R is optimized for vectorized operations
+- The most efficient way to perform operations in R is to avoid loops
+```{r}
+#| echo: true
+#| include: true
+x <- 1:5
+y <- 6:10
+z <- x + y
+print(z)
+```
+```{r}
+#| echo: true
+#| include: true
+z <- numeric(length(x))
+for (i in seq_along(x)) {
+    z[i] <- x[i] + y[i]
+}
+print(z)
+```
+## Apply family of functions
+- `apply()`, `lapply()`, `sapply()`, `tapply()`, `mapply()`
+- These functions are used to apply a function to a vector or list
+- They are more efficient than loops
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+lapply(<list>, <function>)
+```
+- *function* is a function that takes a single argument and returns a single value.
+- *function* can be a built-in function or a custom function.
+- *function* is 'applied' to each element of the list.
+
+
+## Example: `lapply()`
+
+```{r}
+#| echo: true
+#| include: true
+example_list <- list(a = 1:3, b = 4:6, c = 7:9)
+m <- lapply(example_list, mean)
+print(m)
+```
+```{r}
+#| echo: true
+#| include: true
+m <- numeric(length(example_list))
+for (i in seq_along(example_list)) {
+    m[i] <- mean(example_list[[i]])
+}
+print(m)
+```
+
+## `sapply`
+`sapply` is a simplified version of `lapply` that returns a vector or matrix.
+```{r}
+#| echo: true
+#| include: true
+m <- sapply(example_list, mean)
+print(m)
+r <- sapply(example_list, range)
+print(r)
+```
+## `apply`
+- `apply` is used to apply a function to the rows or columns of a matrix
+
+```{r}
+#| echo: true
+#| include: true
+mat <- matrix(1:6, nrow = 3)
+print(mat)
+row_sums <- apply(mat, 1, sum)
+print(row_sums)
+col_sums <- apply(mat, 2, sum)
+print(col_sums)
+```
+## `mapply`
+- `mapply` is a multivariate version of `sapply`
+- It applies a function to the first elements of each argument, the second elements, and so on.
+
+```{r}
+#| echo: true
+#| include: true
+x <- 1:3
+y <- 4:6
+m <- mapply(rep, x, y)
+print(m)
+```
+## `tapply`
+- `tapply` is used to apply a function to subsets of a vector
+
+`x` data frame:
+```{r}
+#| echo: false
+#| include: true
+library(knitr)
+x <- read.csv("../data/sample_data.csv")
+kable(head(x))
+
+```
+## `tapply`
+calulate the mean of Leaf_Count in each Treatment group
+```{r}
+#| echo: true
+#| include: true
+tapply(x$Leaf_Count, x$Treatment, mean)
+```
+For each level of `Treatment`, `tapply` calculates the mean of `Leaf_Count`.
+
+## Functions
+- Functions are blocks of code that perform a specific task
+- Functions take arguments and return a value
+- Functions can be built-in, part of a package, or user-defined
+
+User-defined function:
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+my_function <- function(x) {
+   <do some stuff with x>
+   return(some value)
+}
+```
+## Functions
+Single argument function:
+```{r}
+#| echo: true
+#| include: true
+get_odd_numbers <- function(x) {
+  odd_numbers <- x[x %% 2 == 1]
+  return(odd_numbers)
+}
+odd_numbers <- get_odd_numbers(1:10)
+print(odd_numbers)
+```
+Multiple argument function:
+```{r}
+#| echo: true
+#| include: true
+add_numbers <- function(x, y) {
+  return(x + y)
+}
+```
+## Functions
+Functions can have default arguments
+```{r}
+#| echo: true
+#| include: true
+increment_value <- function(x, inc = 1) {
+  return(x + inc)
+}
+incremented_value <- increment_value(5)
+print(incremented_value)
+incremented_value <- increment_value(5, 2)
+print(incremented_value)
+```
