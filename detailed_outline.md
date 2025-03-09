@@ -74,42 +74,32 @@
 ### Control Structures 
  
 - Conditional statements: `if`, `else if`, `else`
- 
 - Loops: `for`, `while`, `repeat`
-
 - Best practices for readable and efficient looping
 
 ### Vectorized Computation 
 
 - Element-wise operations on vectors
-
 - Recycling rules for vectors
-
 - Comparison with loops for performance
 
 ### apply Family of Functions 
  
 - `apply`, `lapply`, `sapply`, `tapply`, `mapply`
-
 - When to use each function
-
 - Advantages in code simplicity and speed
 
 ### Writing Your Own Functions 
 
 - Function definition syntax
-
 - Default arguments and argument matching
-
 - Return values
 
 
 ### Debugging (optional) 
 
 - Common errors and warnings
- 
 - Using `traceback()`, `browser()`, `debug()`, and `recover()`
-
 - Strategies for troubleshooting
 
 ---
@@ -117,26 +107,23 @@
 
 ## Base Graphics and Plotting 
 
+https://bookdown.org/rdpeng/exdata/the-base-plotting-system-1.html
+
 ### Basic Plots 
 
 - Scatter plots, line plots, bar charts, histograms, boxplots
- 
-- Using `plot()`, `barplot()`, `hist()`, etc.
+- Using `plot()`, `boxplot`, `barplot()`, `hist()`, etc.
 
 ### Customization 
 
 - Titles, axis labels, legends, colors, point shapes, line types
-
 - Annotation and text placement
- 
 - Combining multiple plots on one canvas (`par`, `layout`)
 
 ### Exporting Plots 
 
 - Saving plots to files (PDF, PNG, TIFF)
-
 - Adjusting resolution and dimensions
-
 
 ---
 
@@ -146,31 +133,24 @@
 ### Tidy Data Principles 
 
 - What is “tidy” data?
-
 - Long vs. wide formats
 
 ### ggplot2 Grammar of Graphics 
  
 - Structure of a `ggplot` command (data, aesthetics, geometries)
-
 - Layers, scales, themes
- 
 - Common geoms: `geom_point`, `geom_line`, `geom_bar`, `geom_histogram`, `geom_boxplot`, etc.
 
 ### Faceting and Custom Themes 
  
 - `facet_wrap` and `facet_grid` for multi-panel plots
- 
 - Built-in themes (`theme_bw`, `theme_minimal`)
-
 - Creating and sharing custom themes
 
 ### Extensions and Additional Plot Types 
  
 - `ggrepel` for improved labeling
- 
 - `ggforce` for advanced geometries
-
 - Other specialized geoms (violin plots, ridgeline plots, etc.)
 
 
@@ -189,10 +169,8 @@
 
 ### Key dplyr Verbs 
  
-- `select`, `filter`, `mutate`, `arrange`, `summarize`, `group_by`
- 
+- `select`, `filter`, `mutate`, `arrange`, `summarize`, `group_by` 
 - Piping with `%>%`
- 
 - Joins (`inner_join`, `left_join`, `right_join`, `full_join`)
 
 ### stringr Essentials 
