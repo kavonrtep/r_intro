@@ -58,3 +58,13 @@ NA07000             1        CEU Montgomery female
 NA07037             1        CEU Montgomery female
 NA07051             1        CEU Montgomery   male
 ```
+
+
+## chip_seq.bedgraph
+
+Genomic data file in bedGraph format. The bedGraph format is a tab-delimited text file format used to track scores for genomic regions. Each data line contains. This data specifically containn ChIP-seq signal data for CENH3 region in plant genome. BedGraph format consists of four columns:
+- `chrom`
+- `start`
+- `end`
+- `score`
+

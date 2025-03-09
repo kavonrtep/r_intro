@@ -1,0 +1,359 @@
+---
+title: "Introduction to Base Graphics in R"
+format: revealjs
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+
+
+
+### Scatter Plot
+
+```{r}
+#| echo: true
+#| include: true
+# Generate sample data
+set.seed(123); x <- rnorm(50)+1:50; y <- rnorm(50)+1:50
+
+# Basic scatter plot
+plot(x, y,
+     main = "Scatter Plot",
+     xlab = "X-axis",
+     ylab = "Y-axis",
+     pch = 19,       # solid circle
+     col = "blue")
+```
+## Line Plot
+```{r}
+#| echo: true
+#| include: true
+x <- 0:10
+y <- x^2
+
+plot(x, y,
+     type = "l",
+     main = "Line Plot",
+     xlab = "X-axis",
+     ylab = "Y-axis",
+     col = "red")
+```
+## Plot options
+```{r}
+#| echo: true
+#| include: true
+par(mfrow = c(2, 2))
+plot(x, y, type = "l", main = "type = 'l'")
+plot(x, y, type = "p", main = "type = 'p'")
+plot(x, y, type = "b", main = "type = 'b'")
+plot(x, type = "h", main = "type = 'h'")
+```
+## Adding more data to the plot
+ToothGrowth data set contains the results from an experiment to compare the effect of two supplements on tooth growth in 60 guinea pigs.
+ A data frame with 60 observations on 3 variables.
+
+- [,1]  len   numeric  Tooth length
+- [,2]  supp  factor   Supplement type (VC or OJ).
+- [,3]  dose  numeric  Dose in milligrams/day
+
+```{r}
+#| echo: false
+#| include: true
+library(knitr)
+data(ToothGrowth)
+kable(head(ToothGrowth))
+```
+## Adding more data to the plot - simple plot
+```{r}
+#| echo: true
+#| include: true
+plot(ToothGrowth$dose, ToothGrowth$len,
+     main = "Tooth Growth",
+     xlab = "Dose (mg/day)",
+     ylab = "Tooth length",
+     pch = 19,       # solid circle
+     col = "blue")
+```
+## Adding more data to the plot - by supplement type
+```{r}
+#| echo: true
+#| include: true
+tg_vc <- ToothGrowth[ToothGrowth$supp == "VC", ]
+tg_oj <- ToothGrowth[ToothGrowth$supp == "OJ", ]
+plot(tg_vc$dose, tg_vc$len,
+     main = "Tooth Growth by Supplement Type",
+     xlab = "Dose (mg/day)",
+     ylab = "Tooth length",
+     pch = 19,       # solid circle
+     col = "blue")
+points(tg_oj$dose, tg_oj$len, pch = 19, col = "red")
+legend("bottomright", legend = c("VC", "OJ"), col = c("blue", "red"), pch = 19)
+
+```
+## `plot` function vs. `points` function
+- `plot` function creates a new plot
+- `points` function adds points to an existing plot
+- `lines` function adds lines to an existing plot
+  - `lines` function is like `points(type = "l")`
+```{r}
+#| echo: false
+#| include: true
+par(mfrow = c(1,3))
+xx <- 1:10
+yy <- c(1,3,2,5,4,7,6,9,8,10)
+plot(xx,yy, type = "b", main = "single plot")
+plot(xx,yy, type = "b", main = "plot + points")
+points(xx,yy/2, type = "p", col = "red")
+plot(xx,yy, type = "b", main = "plot + points + lines")
+points(xx,yy/2, type = "l", col = "red")
+lines(xx,yy*2, col = "blue")
+```
+## Plotting categorical data
+Here `len ~ supp` is a **formula** that tells R to plot `len` on the y-axis and `supp` on the x-axis.
+```{r}
+#| echo: true
+#| include: true
+boxplot(len ~ supp, data = ToothGrowth,
+        main = "Tooth Growth by Supplement Type",
+        xlab = "Supplement Type",
+        ylab = "Tooth length"
+)
+```
+
+## Plotting categorical data
+Input for `boxplot` function can be a formula, a matrix, data frame, or a list.
+```{r}
+#| echo: false
+#| include: true
+example_list <- list(a = rnorm(100), b = rnorm(100,3, 0.5), c = rnorm(100, -2, 5))
+boxplot(example_list)
+
+```
+## Categorical data - `stripchart` function
+```{r}
+#| echo: true
+#| include: true
+stripchart(len ~ supp, data = ToothGrowth,
+           main = "Tooth Growth by Supplement Type",
+           xlab = "Supplement Type",
+           ylab = "Tooth length",
+           col = "blue",
+           vertical = TRUE
+)
+```
+Stripchart is a one-dimensional scatter plot that represents the distribution of a continuous variable for different levels of a categorical variable. It can be used for similar data like boxplot.
+
+## Categorical data - `stripchart` function
+What is points overlap? We can use `jitter` to spread the points out.
+```{r}
+#| echo: true
+#| include: true
+stripchart(len ~ supp, data = ToothGrowth,
+           main = "Tooth Growth by Supplement Type",
+           xlab = "Supplement Type",
+           ylab = "Tooth length",
+           col = "blue",
+           method = "jitter",
+           vertical = TRUE
+)
+```
+
+##  Bar plot vs Box plot
+- Use boxplots when you need to display the full distribution, including medians, quartiles, and outliers
+- Boxplots are ideal for comparing the spread and distribution across multiple groups
+- Bar charts can mask the underlying data distribution; opt for boxplots when the detailed spread and potential outliers are important
+- Use Bar charts when you want to show a distribution of data points or perform a comparison of metric values across different subgroups of your data
+
+```{r}
+#| echo: false
+#| include: true
+#| fig.width: 15
+par(mfrow = c(1,4))
+counts <- table(mtcars$cyl)
+boxplot(mpg ~ cyl, data = mtcars,
+        main = "Boxplot of MPG by Cylinders",
+        xlab = "Number of Cylinders",
+        ylab = "Miles per Gallon",
+        col = "lightblue")
+barplot(counts,
+        main = "Bar Chart of Cylinders",
+        xlab = "Number of Cylinders",
+        ylab = "Frequency",
+        col = "lightgreen")
+
+```
+## Bar plot example
+```{r}
+#| echo: true
+#| include: true
+counts <- table(mtcars$gear) # frequency table
+par(mfrow = c(1,2))
+barplot(counts,
+        main = "Bar Chart of Gears",
+        xlab = "Number of Gears",
+        ylab = "Frequency",
+        col = "lightgreen")
+# multiple bar plots
+counts <- table(mtcars$am, mtcars$gear)
+barplot(counts,
+        main = "Bar Chart of Gears by Transmission",
+        xlab = "Number of Gears",
+        ylab = "Frequency",
+        col = c("lightblue", "lightgreen"))
+```
+## Histogram
+Function `hist` takes a vector of values and computes a histogram.
+
+```{r}
+#| echo: true
+#| include: true
+x2 <- rnbinom(100, mu = 10, size = 10)
+hist(x2,
+     main = "Histogram of Negative Binomial Distribution",
+)
+```
+
+## Histogram
+In default settings, `hist` calculates the number of bins automatically. You can specify the number of bins using the `breaks` argument.
+```{r}
+#| echo: true
+#| include: true
+par(mfrow=c(1,2))
+hist(x2,
+     main = "breaks = 20",
+     breaks = 20
+)
+hist(x2,
+     main = "breaks = 1:40",
+     breaks = 0:40
+)
+```
+## Customizing plots
+```{r}
+#| echo: true
+#| include: true
+par(mfrow = c(2,3))
+plot(x,y, main='default plot')
+plot(x,y, col="#FF0000", main ="col set point color")
+plot(1:20, col=rainbow(20), main ='col is a vector os colors')
+plot(1:20, pch=1:20, main = "pch set point shape")
+plot(x,y, cex = 3, main = "cex set point size")
+plot(x,y, main = "plot with lines and grid")
+abline(0, 2) # line with intercept 0 and slope 1
+grid()
+
+```
+## Customizing plots
+```{r}
+#| echo: true
+#| include: true
+par(mfrow = c(2,3))
+plot(x,y, main='default plot', type='b')
+plot(x,y, xlim=c(0, 30), ylim=c(0, 20), type='b', main = "setting limits of x and y axes")
+plot(x,y, log='y', type='b', main = "log scale on y-axis")
+plot(x,y, log='x', type='b', main = "log scale on x-axis")
+plot(x,y, log='xy', type='b', main = "log scale on both axes")
+```
+
+## Adding legends and annotations
+
+```{r}
+#| echo: true
+#| include: true
+plot(x, y, pch = 19, col = "blue")
+points(x + 0.5, y + 0.5, col = "red", pch = 17)
+# Add a legend to differentiate groups
+legend("topleft",
+       legend = c("Group 1", "Group 2"),
+       col = c("blue", "red"),
+       pch = c(19, 17))
+# Add a mathematical annotation using expression()
+mtext(expression(alpha + beta == gamma), side = 3, cex =2)
+```
+## Combining multiple plots
+Regular grid layout using `par` function
+```{r}
+#| echo: true
+#| include: true
+par(mfrow = c(2, 3))  # vector specifying the number of rows and columns
+plot(x, y, main = "plot 1", col = "1")
+plot(x, y, main = "plot 2", col = "2")
+plot(x, y, main = "plot 3", col = "3")
+plot(x, y, main = "plot 4", col = "4")
+plot(x, y, main = "plot 5", col = "5")
+plot(x, y, main = "plot 6", col = "6")
+```
+## Combining multiple plots
+Custom grid layout using `layout` function
+```{r}
+#| echo: true
+#| include: true
+layout(matrix(c(1, 2, 4, 3), nrow=2), width = c(2,1), height = c(1,2))
+layout.show(4)
+
+```
+## Combining multiple plots
+Custom grid layout using `layout` function
+```{r}
+#| echo: true
+#| include: true
+layout(matrix(c(1, 2, 4, 3), nrow=2), width = c(2,1), height = c(1,2))
+hist(x2, main = "1st plot")
+plot(x, y, main = "2nd plot")
+hist(rnorm(100), main = "3rd plot")
+```
+
+## Exporting plots
+- `png` for bitmap graphics
+
+```{r}
+#| echo: true
+#| include: true
+
+png("outputs/plot1.png", width = 800, height = 600) # by defaults units are pixels
+# whatever is plotted between `png` call and `dev.off` will be saved in the file
+plot(x, y, main = "Scatter Plot", col = "blue")
+dev.off()
+```
+- Alternative output functions for bitmap graphics: `jpeg`, `bmp`, `tiff`
+- The output always include single plot. If you want to save multiple plots, use `par` or `layout` functions.
+
+## Exporting plots
+- `pdf` for vector graphics - also suitable for multi-page documents
+- `svg` for vector graphics
+Vector graphics is suitable if you want to do additional editing in a vector graphics editor like Inkscape or Adobe Illustrator.
+
+```{r}
+#| echo: true
+#| include: true
+pdf("outputs/plot2.pdf", width = 8, height = 6)
+plot(x, y, main = "Scatter Plot", col = "blue") # first page
+hist(x2, main = "Histogram")                    # second page
+plot(x, y, main = "Line Plot", col = "red")     # third page
+dev.off()
+```
+## `par` function
+- `par` function is used to set large number of graphical parameters
+- It can be used to set the layout of multiple plots
+   - `par(mfrow = c(2, 2))` will create a 2x2 grid layout
+- `par` function can be used to set many graphical parameters like margins, font size, font family, etc.
+   - `par(mar = c(5, 4, 4, 2) + 0.1)` will set the margins of the plot
+- `par` function can be used to set graphical parameters for text, lines, points, etc.
+   - `par(cex = 1.5)` will set the size of text to 1.5 times the default size
+- `par` function can be used to set graphical parameters for colors, line types, line widths, etc.
+   - `par(lty = 2)` will set the line type to dashed
+- see `?par` for more details
+
+## Summary
+- Scatter plot: `plot(x, y)`
+- Line plot: `plot(x, y, type = "l")`
+- Box plot: `boxplot(len ~ supp, data = ToothGrowth)`
+- Bar plot: `barplot(counts)`
+- Histogram: `hist(x)`
+- Stripchart: `stripchart(len ~ supp, data = ToothGrowth)`
+- Exporting plots: `png()`, `pdf()`
+- Customizing plots: `par()`
+- Combining plots: `par(mfrow = c(2, 2))`, `layout()`
