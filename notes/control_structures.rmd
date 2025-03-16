@@ -1,6 +1,8 @@
 ---
 title: "R introduction"
-format: revealjs
+format:
+  revealjs:
+    self-contained: true
 editor: visual
 ---
 
