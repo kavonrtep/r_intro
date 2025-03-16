@@ -427,7 +427,6 @@ common_breaks <- seq(min(genes$start), max(genes$start), length.out = 50)
 # select subset of genes for each chromosome using subset function or indexing
 # use hist function to plot the distribution of the 'start' positions
 
-
 # TASK:
 # - Modify the layout dimensions (e.g., try par(mfrow = c(3, 2))).
 # - Change the color or transparency in the histograms.

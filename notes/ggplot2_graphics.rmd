@@ -1,0 +1,332 @@
+---
+title: "Introduction to ggplot2 Graphics in R"
+format:
+  revealjs:
+    self-contained: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+```{r}
+#| echo: false
+#| include: false
+library(ggplot2)
+library(gridExtra)
+library(knitr)
+```
+## ggplot2
+- **Data** - Default dataset to use for plot
+- **Mapping** - Aesthetic mappings describe how variables in the data are mapped to visual properties
+- **Layers** - Geometric objects (points, lines, bars) that represent data in plots
+- **Facets** - Conditional plots for subsets of data
+- **Themes** - Control the appearance of all non-data components of the plot
+- **Scales** - Maps data values to visual values
+
+## Data
+Data
+As the foundation of every graphic, ggplot2 uses data to construct a plot. The system works best if the data is provided in a tidy format, which briefly means a **rectangular data frame** structure where rows are observations and columns are variables.
+
+As the first step in many plots, you would pass the data to the ggplot() function, which stores the data to be used later by other parts of the plotting system. For example, if we intend to make a graphic about the mpg dataset, we would start as follows:
+
+`ggplot(data = mpg)`
+
+## Mapping
+The mapping of a plot is a set of instructions on how parts of the data are mapped onto aesthetic attributes of geometric objects.
+
+A mapping can be made by using the `aes()` function to make pairs of graphical attributes and parts of the data.
+
+If we want the `cty` and `hwy` columns to map to the `x-` and `y-`coordinates in the plot, we can do that as follows:
+
+`ggplot(mpg, mapping = aes(x = cty, y = hwy))`
+
+## common aesthetics:
+
+- x: x-axis
+- y: y-axis
+- color: color of the points
+- fill: fill color of the points
+- shape: shape of the points
+- size: size of the points
+- alpha: transparency of the points
+
+
+## Layers: Core of Data Graphics
+
+**Layers**  convert mapped data into human-readable visuals. Each layer has three components:
+
+- **Geometry**  (`geom_*()`): Defines visual shapes (points, lines, rectangles).
+- **Statistical Transformation**  (`stat_*()`): Computes or transforms data for visualization.
+- **Position Adjustment** : Specifies exact placement of visual elements.
+
+*Example:* Two layers displaying `cty` and `hwy` from the `mpg` dataset:
+
+- Points (`geom_point`)
+- Trend line (`geom_smooth`)
+
+## Example: Scatter Plot with Trend Line
+
+```{r}
+#| echo: true
+#| include: true
+ggplot(mpg, aes(x = cty, y = hwy)) +
+  # to create a scatterplot
+  geom_point() +
+  # to fit and overlay a loess trendline
+  geom_smooth(formula = y ~ x, method = "lm")
+```
+## Scales: Connecting Data and Visuals
+
+**Scales**  translate visual aesthetics back into data values, guiding interpretation through axes or legends. They handle:
+
+- **Plot limits**
+- **Axis breaks**
+- **Label formatting**
+- **Data transformations**
+
+Use `scale_{aesthetic}_{type}()` functions to define scales.
+
+## Example:  Mapping the `class` column to a viridis color palette:
+
+```{r}
+#| echo: true
+#| include: true
+g1 <- ggplot(mpg, aes(cty, hwy, colour = class)) +
+  geom_point() + ggtitle('default color scale')
+
+g2 <- ggplot(mpg, aes(cty, hwy, colour = class)) +
+  geom_point() +
+  scale_colour_viridis_d() + ggtitle('viridis color scale')
+
+grid.arrange(g1, g2, ncol = 2)
+```
+## Example: Mapping the `cty` column to a log scale:
+```{r}
+#| echo: true
+#| include: true
+g1 <- ggplot(mpg, aes(x = cty, y = hwy)) +
+  geom_point()
+g2 <- ggplot(mpg, aes(x = cty, y = hwy)) +
+    geom_point() +
+    scale_x_log10() + ggtitle('x log scale')
+grid.arrange(g1, g2, ncol = 2)
+```
+## Facets: Visualizing Subsets
+
+**Facets**  split data into smaller panels ("small multiples") based on one or more variables. This helps quickly reveal patterns or trends within subsets.
+Define facets using a formula with functions like `facet_grid()` or `facet_wrap()`.
+**Example:** using iris dataset to create a scatter plot for each species
+
+
+```{r}
+#| echo: true
+#| include: true
+ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point(size = 3) +
+  facet_grid(~Species)
+```
+
+
+## Example: facet_grid() with mpg dataset
+- `year` year of manufacture
+- `drv` the type of drive train, where f = front-wheel drive, r = rear wheel drive, 4 = 4wd
+- `cty` city miles per gallon
+- `hwy` highway miles per gallon
+
+```{r}
+#| echo: true
+#| include: true
+ggplot(mpg, aes(x = cty, y = hwy)) +
+  geom_point() +
+  facet_grid(year ~ drv)
+```
+## Theme: Customizing Plot Appearance
+
+**Themes**  control non-data elements, defining the look and feel of a plot (e.g., legend position, background, axis styles).
+
+- Use built-in themes (`theme_*()`) for quick styling.
+- Use `theme()` and `element_*()` for detailed adjustments.
+
+## Theme Example:
+
+```{r}
+#| echo: true
+#| include: true
+ggplot(mpg, aes(cty, hwy, colour = class)) +
+  geom_point() +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    axis.line = element_line(size = 0.75),
+    axis.line.x.bottom = element_line(colour = "blue")
+  )
+```
+## Other types of plots
+- **Bar plots**: `geom_bar()`
+- **Line plots**: `geom_line()`
+- **Box plots**: `geom_boxplot()`
+- **Histograms**: `geom_histogram()`
+- **Density plots**: `geom_density()`
+
+
+
+## Bar Plot Example
+```{r}
+#| echo: true
+#| include: true
+ggplot(mpg, aes(x = class)) +
+  geom_bar()
+```
+In this example, we are creating a bar plot of the `class` column from the `mpg` dataset. `geom_bar() is counting the number of observations in each class and plotting the result.
+
+## Bar Plot Example
+What is we already have the counts and want to plot them?
+```{r}
+#| echo: true
+#| include: true
+x <- c(Mazda=10, Toyota=20, Honda=30)
+ggplot(data.frame(x = names(x), y = x), aes(x, y)) +
+  geom_bar(stat = "identity")
+```
+## Line Plot Example
+```{r}
+#| echo: true
+#| include: true
+xy <- data.frame(x = 1:10, y = (1:10)^2)
+ggplot(xy, aes(x, y)) +
+  geom_line()
+```
+## Line Plot Example with multiple lines
+Using `Orange` dataset:
+```{r}
+#| echo: false
+#| include: true
+
+kable(Orange)
+```
+## Line Plot Example with multiple lines
+```{r}
+ggplot(Orange, aes(x = age, y = circumference, color = Tree)) +
+  geom_line()
+```
+## Box Plot Example
+```{r}
+#| echo: true
+#| include: true
+
+ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
+  geom_boxplot()
+
+```
+## Box Plot - flipping the axes
+```{r}
+#| echo: true
+#| include: true
+ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
+  geom_boxplot() +
+  coord_flip()
+```
+
+## Histogram Example
+```{r}
+#| echo: true
+#| include: true
+ggplot(iris, aes(x = Sepal.Length)) +
+  geom_histogram(alpha = 0.7, bins = 20)
+```
+## Histogram Example
+What if we plot each species separately with different colors?
+```{r}
+#| echo: true
+#| include: true
+ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
+  geom_histogram(alpha = 0.5, bins = 20, position ='identity')
+```
+## Histogram Example
+What if we what each histogram to be stacked on top of each other?
+```{r}
+#| echo: true
+#| include: true
+ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
+  geom_histogram(alpha = 0.5, bins = 20, position = "stack")
+```
+## Histogram Example
+What if we what each histogram to in different panels?
+
+## Histogram Example
+What if we what each histogram to in different panels?
+```{r}
+#| echo: true
+#| include: true
+ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
+  geom_histogram(alpha = 0.5, bins = 20) +
+  facet_grid(Species~.)
+```
+## Density Plots
+```{r}
+#| echo: true
+#| include: true
+ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
+  geom_density(alpha = 0.5)
+```
+## Combining plots
+```{r}
+#| echo: true
+#| include: true
+library(gridExtra)
+p1 <- ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
+  geom_density(alpha = 0.5) +
+  facet_grid(Species~.)
+p2 <- ggplot(Orange, aes(x = age, y = circumference, color = Tree)) +
+  geom_line()
+p3 <- ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
+  geom_boxplot()
+
+grid.arrange(p1, p2, p3, ncol = 2)
+```
+## Combining plots
+```{r}
+#| echo: true
+#| include: true
+
+grid.arrange(p1, p2, p3, nrow = 1)
+```
+## Combining plots
+```{r}
+#| echo: true
+#| include: true
+grid.arrange(p1, p2, p3, layout_matrix = rbind(c(1, 1), c(2, 3)))
+
+```
+## Combining plots
+```{r}
+#| echo: true
+#| include: true
+grid.arrange(p1, p2, p3, layout_matrix = rbind(c(1, 1), c(2, 3)), heights = c(2, 1))
+```
+
+## Exporting plots
+`ggsave()` function can be used to save the plot to a file. It takes the following arguments:
+
+- `filename`: name of the file to save the plot
+- `plot`: the plot to save
+- `widht and height`: dimensions of the plot
+- `units`: units of the dimensions (default is inches, possible values are "in", "cm", "mm", "px")
+- `device`: the device to use for saving the plot (default is "png", other possible values are "pdf", "jpeg", "tiff", "bmp")
+- `dpi`: resolution of the plot in dots per inch
+
+```r
+p_final <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(1, 1), c(2, 3)), heights = c(2, 1))
+ggsave("final_plot.png", p_final, width = 10, height = 10, device = "png")
+ggsave("final_plot.pdf", p_final, width = 10, height = 10, device = "pdf")
+```
+
+## Resources
+R Graph Gallery: https://www.r-graph-gallery.com/
+R Gallery Book: https://bookdown.org/content/b298e479-b1ab-49fa-b83d-a57c2b034d49/
+R Data Visualization: https://r4ds.had.co.nz/data-visualisation.html
+
+
+

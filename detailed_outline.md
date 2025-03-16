@@ -151,6 +151,7 @@ https://bookdown.org/rdpeng/exdata/the-base-plotting-system-1.html
  
 - `ggrepel` for improved labeling
 - `ggforce` for advanced geometries
+- puting multiple plots together - `gridExtra` package
 - Other specialized geoms (violin plots, ridgeline plots, etc.)
 
 

@@ -1,6 +1,8 @@
 ---
 title: "Introduction to Base Graphics in R"
-format: revealjs
+format:
+  revealjs:
+    self-contained: true
 editor: visual
 ---
 <style>
