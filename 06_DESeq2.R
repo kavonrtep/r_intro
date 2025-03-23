@@ -304,7 +304,8 @@ res2_05_annotated <- merge(as.data.frame(res2_05_reordered),
 res2_05_annotated <- res2_05_annotated[order(res2_05_annotated$padj), ]
 
 # Export the annotated results to a CSV file.
-write.csv(res2_05_annotated, "work_dir/deseq2_results_annotated.csv", row.names = FALSE)
+write.csv(res2_05_annotated, "work_dir/deseq
+2_results_annotated.csv", row.names = FALSE)
 
 # TASK: create new data frame which will include res2_05_annotated and  also expression
 # values for each gene in each sample
