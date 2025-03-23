@@ -269,6 +269,14 @@ pheatmap(assay(ntd2)[select, ], cluster_rows = TRUE, show_rownames = FALSE,
 # TASK: Export this heatmap as a PNG file (e.g., using png(), pheatmap(), and dev.off()).
 
 # Create an interactive heatmap using heatmaply.
+
+# NOTE: it may be necessary to install the 'heatmaply' and 'htmlwidgets' packages.
+# use command:
+# install.packages(c("heatmaply", "htmlwidgets"))
+
+
+
+
 library(heatmaply)
 library(htmlwidgets)
 p <- heatmaply(assay(ntd2)[select, ], scale = "row", k_row = 3, k_col = 3)
@@ -298,3 +306,6 @@ res2_05_annotated <- res2_05_annotated[order(res2_05_annotated$padj), ]
 # Export the annotated results to a CSV file.
 write.csv(res2_05_annotated, "work_dir/deseq2_results_annotated.csv", row.names = FALSE)
 
+# TASK: create new data frame which will include res2_05_annotated and  also expression
+# values for each gene in each sample
+# use assay(vsd2) to get normalized and transformed data, then merge it with res2_05_annotated
