@@ -1,0 +1,118 @@
+---
+title: "Introduction to Bioconductor Classes and Methods in R"
+format:
+  revealjs:
+    self-contained: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+## What is Bioconductor?
+
+- Bioconductor is an open-source project that provides tools for the analysis of high-throughput genomic data.
+- It offers a wide range of packages designed for bioinformatics and computational biology.
+
+
+## Key Bioconductor Classes
+
+- Bioconductor uses specialized classes to organize data.
+- For example, the **SummarizedExperiment**  class is used to store assay data along with sample metadata.
+- The **SummarizedExperiment** class is used to store rectangular matrices of experimental results, which are commonly produced by sequencing and microarray experiments. Note that SummarizedExperiment can simultaneously manage several experimental results or assays as long as they be of the same dimensions.
+- Each object stores observations of one or more samples, along with additional meta-data describing both the observations (features) and samples (phenotypes)
+
+## SummarizedExperiment Class
+![](SE.svg){width="80%"}
+## SummarizedExperiment Class
+```{r}
+#| echo: true
+#| include: true
+# Load the SummarizedExperiment package
+library(SummarizedExperiment)
+
+# Create a simple SummarizedExperiment object
+se <- SummarizedExperiment(
+  assays = list(counts = matrix(1:12, nrow = 3, ncol = 4)),
+  colData = DataFrame(sample = LETTERS[1:4])
+)
+# Inspect the object structure
+str(se)
+```
+
+## Slots
+- Slots are internal components of S4 objects that store data.
+- They act like fields in an object, holding the underlying data (e.g., assay data, metadata).
+```{r}
+#| echo: true
+#| include: true
+# list slots of the SummarizedExperiment object
+slotNames(se)
+
+# Access the 'colData' slot
+sample_data <- colData(se)
+print(sample_data)
+
+```
+## Exploring Available Methods
+
+- R provides functions to list available methods for a class or function.
+- For example, you can use `methods()` and `showMethods()` to see what methods are available for a given class or function.
+
+
+```{r}
+#| echo: true
+#| include: true
+# List methods for the SummarizedExperiment class
+methods(class = "SummarizedExperiment")
+
+```
+
+
+
+---
+
+## Working with Methods
+
+Methods are functions that operate on specific objects.
+For a **SummarizedExperiment** , you can use methods like `assay()` and `colData()` to extract data.
+
+```{r}
+#| echo: true
+#| include: true
+# Extract the main assay (counts matrix)
+counts_matrix <- assay(se)
+print(counts_matrix)
+
+# Extract sample metadata
+sample_info <- colData(se)
+print(sample_info)
+```
+## Practical Tip: Discovering More Methods
+
+To explore methods for any function or class, you can also use:
+
+- `methods("functionName")` to list methods for a specific function.
+- `help("functionName")` or `?functionName` for detailed documentation.
+
+```{r}
+#| echo: true
+#| include: true
+# For example, to see methods for the 'plot' function:
+methods("plot")
+```
+
+
+## Summary
+
+- **Bioconductor**  is essential for genomic data analysis.
+- **SummarizedExperiment**  organizes assay data and metadata.
+- Use **methods()**  and **showMethods()**  to explore available functions and methods.
+- These tools help you work effectively with complex data structures in R.
+- Bioconductor packages usually provide detailed documentation and vignettes to help you get started. Vignette often contains detailed examples and use cases.
+
+Further reading:
+
+- [Bioconductor Website](https://bioconductor.org/)
+- [DESeq2 Vignette](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html)
