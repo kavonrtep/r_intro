@@ -199,6 +199,37 @@ wide_df <- long_df %>%
               values_from = "Expression")
 print(wide_df)
 
+
+## Data joining with `left_join()`, `right_join()`, `inner_join()`, and `full_join()`
+# - `left_join()`: returns all rows from the left table and the matched rows from the right table.
+# - `right_join()`: returns all rows from the right table and the matched rows from the left table.
+# - `inner_join()`: returns only the rows that have matching values in both tables.
+# - `full_join()`: returns all rows when there is a match in either table.
+
+df1 <- tibble(ID = c(1, 2, 3), Value = c(10, 20, 30))
+df2 <- tibble(ID = c(2, 3, 4), Value = c(200, 300, 400))
+joined_df <- df1 %>% left_join(df2, by = "ID")
+print(joined_df)
+
+joined_df <- df1 %>% right_join(df2, by = "ID")
+print(joined_df)
+
+df1 <- tibble(ID = c(1, 2, 3), Value = c(10, 20, 30))
+df2 <- tibble(ID = c(2, 3, 4), Value = c(200, 300, 400))
+
+joined_df <- df1 %>% inner_join(df2, by = "ID")
+print(joined_df)
+
+joined_df <- df1 %>% full_join(df2, by = "ID")
+print(joined_df)
+
+
+
+
+
+
+
+
 # ## String manipulation with functions from `stringr` package
 # - The `stringr` package provides functions for string manipulation.
 # - Common functions include:
