@@ -32,7 +32,7 @@ library(tidyverse)
 # ===============================
 # Read the training dataset from a CSV file.
 # Ensure the file path is correct relative to your working directory.
-train_file <- "data/aml/data_set_ALL_AML_train.csv"
+train_file <- "../data/aml/data_set_ALL_AML_train.csv"
 expr <- read_csv(train_file)
 # Tip: You can also open this CSV file in Excel or LibreOffice Calc to inspect its
 # structure.
@@ -205,7 +205,7 @@ print(p2)
 # ===============================
 # Load the annotation file that maps each patient (sample) to a cancer type (e.g., ALL
 # or AML).
-annotation <- read_csv("data/aml/annotation.csv")
+annotation <- read_csv("../data/aml/annotation.csv")
 print(head(annotation))
 # Rename the 'patient' column to 'Sample' to match the sample identifiers in expr_long.
 annotation <- annotation %>% rename(Sample = patient)
@@ -364,5 +364,5 @@ p <- pheatmap(expr_clean_no_control, scale = "row", show_rownames = FALSE,
               color = colorRampPalette(c("blue", "white", "red"))(100)
 )
 # Save the heatmap to a file for future reference or publication.
-ggsave("work_dir/heatmap_all_genes.png", p, width = 10, height = 10, units = "in", dpi
+ggsave("../work_dir/heatmap_all_genes.png", p, width = 10, height = 10, units = "in", dpi
   = 300)
