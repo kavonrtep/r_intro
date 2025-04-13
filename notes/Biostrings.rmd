@@ -287,3 +287,4 @@ oligo_freq <- oligonucleotideFrequency(dna_seq, width=4)
 sorted_oligo_freq <- sort(oligo_freq, decreasing=TRUE)[1:10]
 print(sorted_oligo_freq)
 ```
+
