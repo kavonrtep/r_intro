@@ -1,0 +1,289 @@
+---
+title: "Biostrings: Bioconductor Package for Sequence Analysis"
+format:
+  revealjs:
+    self-contained: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+
+## Biostrings: Bioconductor Package for Sequence Analysis
+- Biostrings is part of Bioconductor and is specifically geared toward string operations in the biological domain. 
+- It provides classes like:
+  - `DNAString`,
+  - `RNAString`,
+  - `AAString`,
+  - and their collections (e.g., `DNAStringSet`). 
+
+- With Biostrings you can perform high-performance operations on sequence data such as finding patterns (motifs), calculating nucleotide frequencies, and executing pairwise alignments.
+
+## Creating a Sequence Object
+
+```{r}
+#| echo: true
+#| include: true
+library(Biostrings)
+library(BSgenome)
+# Create a DNA sequence
+dna_seq <- DNAString("ATGCGTACGTAGCTAG")
+print(dna_seq)
+
+# Create an RNA sequence
+rna_seq <- RNAString("AUGCGUACGUAGCUAG")
+print(rna_seq)
+
+# Convert a DNA sequence to RNA
+rna_converted <- as(rna_seq, "RNAString")
+print(rna_converted)
+
+# Create an amino acid (protein) sequence
+aa_seq <- AAString("MVLSPADKTNVKAAW")
+print(aa_seq)
+
+# Create a set of DNA sequences using DNAStringSet
+dna_set <- DNAStringSet(c("ATGCGTACGACAGTAGCTAG", "GATTACAAACATAAA", "TTACATGACCCTTTACATG"))
+print(dna_set)
+```
+## Basic Sequence Operations
+Biostrings provides a variety of functions for manipulating and analyzing sequences. Here are some common operations:
+ - `width()`: Get the length of a sequence. (or `nchar()` for character strings)
+ - `subseq()`: Extract a subsequence.
+ - `reverseComplement()`: Get the reverse complement of a DNA sequence.
+
+```{r}
+#| echo: true
+#| include: true
+# Get the width (length) of the DNA sequence
+
+seq_length <- width(dna_set)
+print(seq_length)
+
+# Extract a subsequence (e.g., positions 4 to 8)
+subseq_dna <- subseq(dna_set, start = 4, end = 8)
+print(subseq_dna)
+```
+## Basic Sequence Operations
+```{r}
+#| echo: true
+#| include: true
+# Get the reverse complement of the DNA sequence
+rev_comp_dna <- reverseComplement(dna_set)
+print(dna_set)
+print(rev_comp_dna)
+
+```
+## Basic Sequence Operations
+Translation of DNA to protein sequences can be done using the `translate()` function. This function translates a nucleotide sequence into its corresponding amino acid sequence based on the genetic code. `transtate` function has several parameters:
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+translate(x, genetic.code=GENETIC_CODE, no.init.codon=FALSE, if.fuzzy.codon="error")
+```
+`GENETIC_CODE` is a table that defines the genetic code. The default is the standard genetic code.
+
+```{r}
+#| echo: true
+#| include: true
+print(GENETIC_CODE)
+# Translate a DNA sequence to a protein sequence
+translated_seq <- translate(dna_set)
+print(translated_seq)
+```
+## Pattern Matching
+Finding motifs (specific patterns) in sequences is a common task.
+The matchPattern functions is useful for finding the location(s) of a short
+nucleotide sequence within a larger sequence.
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+# Match single patterns in single sequence
+matchPattern(pattern, subject,
+               max.mismatch=0, min.mismatch=0,
+               with.indels=FALSE, fixed=TRUE,
+               algorithm="auto")
+
+countPattern(pattern, subject,
+             max.mismatch=0, min.mismatch=0,
+             with.indels=FALSE, fixed=TRUE,
+             algorithm="auto")
+
+# Match single patterns in multiple sequences
+ vmatchPattern(pattern, subject,
+               max.mismatch=0, min.mismatch=0,
+               with.indels=FALSE, fixed=TRUE,
+               algorithm="auto", ...)
+
+vcountPattern(pattern, subject,
+              max.mismatch=0, min.mismatch=0,
+              with.indels=FALSE, fixed=TRUE,
+              algorithm="auto", ...)
+```
+## Pattern Matching
+```{r}
+#| echo: true
+#| include: true
+# Define a short pattern (motif) to search within the DNA sequence
+pattern <- "CGTACG"
+
+# Use matchPattern to find the motif in the DNA sequence
+print(dna_seq)
+match_result <- matchPattern(pattern, dna_seq)
+print(match_result)
+
+# Count how many times the pattern occurs in a sequence
+pattern_count <- countPattern(pattern, dna_seq)
+print(paste("Number of occurrences of", pattern, ":", pattern_count))
+```
+## Pattern Matching
+```{r}
+#| echo: true
+#| include: true
+pattern <- "ACAT"
+# Use vmatchPattern to find the motif in the DNA sequence set
+print(dna_set)
+match_result_set <- vmatchPattern(pattern, dna_set)
+print(match_result_set)
+```
+## Pattern Matching
+Matching with mismatches is useful when you want to find similar sequences that may have slight variations. The `max.mismatch` parameter allows you to specify the maximum number of mismatches allowed in the search.
+```{r}
+#| echo: true
+#| include: true
+# Tolerate mismatches
+pattern <- "ACAT"
+# Use vmatchPattern to find the motif in the DNA sequence set
+dna_seq = DNAString("ACATGACATGACATGACGT")
+match_result_set <- matchPattern(pattern, dna_seq, max.mismatch=1)
+print(match_result_set)
+```
+## Data Import and Export
+- The `readDNAStringSet()` function is commonly used to read DNA sequences from a FASTA file,
+- The `writeXStringSet()` is used to write sequences to a file.
+- File could be in plain text format or compressed format (e.g., gzipped).
+
+```{r}
+#| echo: true
+#| include: true
+fasta_file_1 <- "../data/seq_data/someORF.fa"
+fasta_file_2 <- "../data/seq_data/dm3_upstream2000.fa.gz"
+# Read a FASTA file
+dna_seq_fasta <- readDNAStringSet(fasta_file_1)
+print(dna_seq_fasta)
+# Read a gzipped FASTA file
+dna_seq_fasta_gz <- readDNAStringSet(fasta_file_2)
+print(dna_seq_fasta_gz)
+```
+## Data Import and Export
+- For protein sequences, you can use the `readAAStringSet()` function to read protein sequences from a FASTA file.
+
+```{r}
+#| echo: true
+#| include: true
+# Read a protein sequence from a FASTA file
+protein_fasta_file <- "../data/seq_data/UP000000625.fasta.gz"
+protein_seq_fasta <- readAAStringSet(protein_fasta_file)
+print(protein_seq_fasta)
+```
+## Importing Multiple Sequence Alignments
+- The `readDNAMultipleAlignment()` function is used to read multiple sequence alignments in the FASTA, CLUSTAL, or PHYLIP formats.
+
+```{r}
+#| echo: true
+#| include: true
+# Read a multiple sequence alignment in Clustt format
+aln_file <- "../data/seq_data/example_msa.fasta"
+aln <- readAAMultipleAlignment(aln_file, format = "fasta")
+print(aln)
+```
+## Analyzing Multiple Sequence Alignments
+- The `consensusMatrix()` function computes a consensus matrix fomr MSA
+- The `consensusString()` function generates a consensus sequence matrix.
+
+```{r}
+#| echo: true
+#| include: true
+# Compute the consensus matrix
+cons_mat <- consensusMatrix(aln)
+print(cons_mat)
+consensus_seq <- consensusString(cons_mat)
+print(consensus_seq)
+```
+## Comparing Two Sequences with Pairwise Alignment
+- The `pairwiseAlignment()` function performs pairwise sequence alignment.
+- Type of alignment can be specified using the `type` parameter (global, local, or overlap, ...)
+
+```{r}
+#| echo: true
+#| include: true
+# Create two DNA sequences to align
+seq1 <- DNAString("ATGCTAGCTAG")
+seq2 <- DNAString("ATGCGGCTAG")
+# Perform pairwise alignment using a simple scoring scheme
+alignment <- pairwiseAlignment(seq1, seq2)
+print("Pairwise alignment:")
+print(alignment)
+
+# View the aligned sequences and score details
+aligned_seq1 <- pattern(alignment)
+aligned_seq2 <- subject(alignment)
+print(aligned_seq1)
+print(aligned_seq2)
+print(paste("Alignment score:", score(alignment)))
+```
+
+## Accessing Individual Sequences from XStringSet
+
+- You can access individual sequences from an `XStringSet` object using indexing.
+- With `[` the result is an `XStringSet` object.
+- With `[[` the result is an `XString` object.
+- Accessing with sequence names is also possible.
+
+```{r}
+#| echo: true
+#| include: true
+# Access the first sequence in the DNAStringSet
+first_seq <- dna_set[1]
+print(first_seq)
+# Access the first sequence using double brackets
+first_seq_2 <- dna_set[[1]]
+print(first_seq_2)
+# access multiple sequences
+multiple_seqs <- dna_set[1:2]
+print(multiple_seqs)
+```
+## Accessing subsequences
+- You can access subsequences using the `subseq()` function.
+- or `getSeq()` function from `BSgenome` package.
+```{r}
+#| echo: true
+#| include: true
+
+g <- DNAStringSet(c(chr1="ACGTACGTACGT", chr2="TGCACTGCA", chr3="GATCGATC"))
+print(g)
+s1 <- getSeq(g , GRanges("chr1" , IRanges(1, 4)))
+print(s1)
+s2 <- getSeq(g , GRanges("chr2" , IRanges(1:4, 4:6,)))
+print(s2)
+```
+## Sequence analysis
+- `alphabetFrequency()` function computes the frequency of each letter of the relevant alphabet.
+- `letterFrequency()`  is similar, but more compact if one is only interested in certain letters. It can also tabulate letters "in common"
+- `nucleotideFrequency()`, `oligonucleotideFrequency()`, and `dinucleotideFrequency()` are specialized functions for nucleotide sequences.
+
+```{r}
+#| echo: true
+#| include: true
+print(dna_seq)
+nucl_freq <- alphabetFrequency(dna_seq, baseOnly=TRUE)
+print(nucl_freq)
+## get the most represented 4-mers
+oligo_freq <- oligonucleotideFrequency(dna_seq, width=4)
+sorted_oligo_freq <- sort(oligo_freq, decreasing=TRUE)[1:10]
+print(sorted_oligo_freq)
+```
