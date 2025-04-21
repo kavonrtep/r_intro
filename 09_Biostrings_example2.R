@@ -18,13 +18,13 @@ library(BSgenome.Drerio.UCSC.danRer11)
 
 
 
-
-
 # Paths to the BED files that contain coordinates for the +/- TSS regions.
 hsapiens_bed_path <- "data/seq_data/tss_hs.bed"             # e.g., "data/H_sapiens_TSS.bed"
 drerio_bed_path   <- "data/seq_data/tss_drerio.bed"               # e.g., "data/D_rerio_TSS.bed"
 
 
+# instead of reading the genome sequences from the FASTA files, we will use the BSgenome package
+# BSgenome packages are pre-packaged genome sequences for various model organisms
 
 # -------------------------------------------------------------------
 # LOAD GENOME SEQUENCES as BSgenome objects
@@ -59,10 +59,6 @@ seqlevels(drerio_bed)
 seqlevels(drerio_bed) <- paste0("chr", seqlevels(drerio_bed))
 
 
-# Optional: Check that the seqnames in the BED file match the names in the genome FASTA.
-# For example:
-#   unique(seqnames(hs_bed))
-#   names(hs_genome)
 
 # -------------------------------------------------------------------
 # EXTRACT SUBSEQUENCES AT TSS REGIONS
@@ -117,16 +113,10 @@ plot(dr_gc_profile, type = "l", col = "blue", ylim = c(0,1))
 points(hs_gc_profile, col = "red", type = "l", ylim = c(0,1))
 
 # Calculate avarage nucleotide content in the genomes
+gc_hs_chr1 <- letterFrequency(BSgenome.Hsapiens.UCSC.hg38$chr1, letters = "GC", as.prob = TRUE)
+abline(h = gc_hs_chr1, col = "red", lty = 2)
 
-hs_content <- alphabetFrequency(hs_genome)
-hs_content_total <- colSums(hs_content)/sum(hs_content)
+gc_drerio_chr1 <- letterFrequency(BSgenome.Drerio.UCSC.danRer11$chr1, letters = "GC", as.prob = TRUE)
+abline(h = gc_drerio_chr1, col = "blue", lty = 2)
 
-dr_content <- alphabetFrequency(drerio_genome)
-dr_content_total <- colSums(dr_content)/sum(dr_content)
-
-## compare GC content in the genome with GC content in the TSS region - use abline to add
-## horizontal line to the plot
-
-
-
-## Task Use the function get_N_profile to calculate profiles for C,G,A,T separately and the results
+letterFrequency(hs_sequences, "GC", as.prob = TRUE)

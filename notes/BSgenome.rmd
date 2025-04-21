@@ -1,0 +1,178 @@
+---
+title: "BSgenome: Bioconductor Package for Genome Sequences"
+format:
+  revealjs:
+    self-contained: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+
+## Overview of BSgenome
+
+- **Purpose:**  Infrastructure for full reference genomes in R via Bioconductor
+- **Data classes:**  Stores genomes as `DNAString` objects in on‑disk packages
+- **Integration:**  Works seamlessly with Biostrings, GenomicRanges, and other Bioconductor tools
+
+
+## Installation & Loading
+
+- **Install BSgenome infrastructure**  via BiocManager
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+if (!requireNamespace("BiocManager", quietly=TRUE))
+  install.packages("BiocManager")
+BiocManager::install("BSgenome")
+```
+
+- **Install specific genome packages**
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+BiocManager::install(c(
+  "BSgenome.Hsapiens.UCSC.hg38",
+  "BSgenome.Drerio.UCSC.danRer11"
+))
+```
+
+- **Load packages into session**
+
+```{r}
+#| echo: true
+#| include: true
+library(BSgenome)
+library(BSgenome.Hsapiens.UCSC.hg38)
+library(BSgenome.Drerio.UCSC.danRer11)
+```
+
+## Discovering Available Genomes
+- **List available BSgenome packages**  for your Bioconductor version:
+```{r}
+#| echo: true
+#| include: true
+available.genomes()
+```
+- **List installed BSgenome packages**  on your system:
+```{r}
+#| echo: true
+#| include: true
+installed.genomes()
+```
+
+## Inspecting Human Genome (hg38)
+
+
+- **Attach and assign**
+
+```{r}
+#| echo: true
+#| include: true
+library(BSgenome.Hsapiens.UCSC.hg38)
+genome_human <- BSgenome.Hsapiens.UCSC.hg38
+```
+- **View sequence names**
+```{r}
+#| echo: true
+#| include: true
+seqnames(genome_human) |>
+  head(10)
+```
+
+- **Get chromosome lengths**
+```{r}
+#| echo: true
+#| include: true
+seqlengths(genome_human)["chr1"]
+```
+
+
+## Basic Genome Queries
+
+
+- **Extract subsequence**  (e.g., chr1 positions 100000–110000):
+
+```{r}
+#| echo: true
+#| include: true
+chr1_10kb <- getSeq(genome_human, "chr1", 100000, 110000)
+print(chr1_10kb)
+```
+- Accessing entire chromosome sequences:
+```{r}
+chr1 <- genome_human$chr1
+print(chr1)
+```
+## Basic Genome Queries
+```{r}
+#| echo: true
+#| include: true
+metadata(genome_human)
+```
+
+## Benefits of BSgenome
+
+- **Reproducibility:**  Versioned, release‑tied data packages
+- **Efficiency:**  On‑disk SQLite‑backed storage, avoids loading entire genomes into RAM
+- **Discoverability:**  Programmatic listing and loading (`available.genomes()`, `getBSgenome()`)
+- **Integration:**  Direct compatibility with Biostrings, GenomicRanges, and downstream analyses
+
+
+## TxDb - Transcript Database
+
+A **TxDb**  (transcript database) is an on‑disk SQLite representation of transcript annotations (genes, transcripts, exons, CDS, UTRs, etc.) for a given genome build. It lives in a Bioconductor package (e.g. `TxDb.Scerevisiae.UCSC.sacCer3.sgdGene`, `TxDb.Dmelanogaster.UCSC.dm6.ensGene`, etc.) and provides fast, indexed queries against gene models.
+
+
+## Installing and Loading
+
+
+
+```r
+if (!requireNamespace("BiocManager", quietly=TRUE))
+    install.packages("BiocManager")
+
+# Example: fly annotations
+BiocManager::install("TxDb.Dmelanogaster.UCSC.dm6.ensGene")
+
+# Load the package
+library(TxDb.Dmelanogaster.UCSC.dm6.ensGene)
+txdb <- TxDb.Dmelanogaster.UCSC.dm6.ensGene
+```
+
+
+## Core Extraction Functions
+
+
+- **`genes(txdb)`**
+
+Returns a `GRanges` of all gene coordinates.
+
+- **`transcripts(txdb)`**
+
+Returns a `GRanges` of all transcript coordinates (with `strand` information).
+
+- **`exonsBy(txdb, by="gene")`**
+
+A `GRangesList` of exons, grouped by gene.
+
+- **`intronsByTranscript(txdb, use.names=TRUE)`**
+
+A `GRangesList` of introns, grouped by transcript.
+
+- **`cdsBy(txdb, by="tx")`**
+
+A `GRangesList` of coding sequences (CDS), grouped by transcript.
+
+- **`promoters(txdb, upstream=N, downstream=M)`**
+
+Given a `GRanges` (e.g. from `transcripts()` or `genes()`), returns the regions upstream/downstream around the “start” of each range (useful to define promoter windows).
+
+All of these return `GRanges` or `GRangesList` objects that you can pass directly to `getSeq()` (from **BSgenome** ) or to overlap‐based functions in **GenomicRanges** .
+

@@ -1,0 +1,342 @@
+---
+title: "GenomicRanges : Bioconductor Package for Genomic Data"
+format:
+  html:
+    self-contained: true
+    toc: true
+    toc-location: left
+    toc-depth: 4
+
+---
+
+# Introduction to GenomicRanges
+
+## What are genomic ranges?
+
+Genomic ranges represent intervals or regions in a genome, defined by:
+- A sequence name (chromosome or contig)
+- Start and end positions
+- Strand information (+ for forward, - for reverse, * for unstranded)
+- Additional metadata (e.g., gene names, scores, etc.)
+
+These ranges can represent various genomic features such as genes, exons, transcripts, binding sites, variants, or any other region of interest in a genome.
+
+## Core classes in GenomicRanges
+
+The GenomicRanges package provides three main classes:
+
+1. **GRanges**: Represents a collection of genomic ranges, each with a single start and end location
+2. **GRangesList**: Represents groups of genomic ranges, useful for features with hierarchical relationships (e.g., exons grouped by transcript)
+3. **GPos**: Represents genomic positions (single points rather than ranges)
+
+## Relationship with Biostrings
+
+While Biostrings handles sequence data (DNA, RNA, protein sequences), GenomicRanges handles genomic coordinates and intervals. The integration between these packages allows you to:
+- Extract sequences from specific genomic coordinates
+- Analyze sequence content within genomic ranges
+- Connect sequence features with genomic annotations
+
+
+
+# Basic GenomicRanges Operations
+
+## Loading the GenomicRanges Package
+```{r}
+#| echo: true
+#| include: true
+#| results: hide
+#| message: false
+# Load the GenomicRanges package
+library(GenomicRanges)
+library(Biostrings)
+```
+
+## Creating GRanges Objects
+
+```{r}
+#| echo: true
+#| include: true
+# Create a simple GRanges object
+gr <- GRanges(
+  seqnames = c("chr1", "chr2", "chr2", "chr1", "chr3"),
+  ranges = IRanges(start = c(10, 15, 20, 25, 30), end = c(20, 25, 30, 35, 40)),
+  strand = c("+", "-", "+", "*", "-"),
+  score = c(5, 10, 15, 20, 25),
+  GC = c(0.45, 0.55, 0.60, 0.70, 0.80)
+)
+
+# Display the GRanges object
+gr
+
+# Examine the structure
+str(gr)
+```
+
+The output will show a GRanges object with 5 ranges and 2 metadata columns (score and GC). The genomic coordinates (seqnames, ranges, and strand) are displayed on the left, and the metadata columns are on the right.
+
+## Accessing GRanges Components
+
+```{r}
+#| echo: true
+#| include: true
+# Access the sequence names (chromosomes)
+seqnames(gr)
+
+# Access the ranges (start and end positions)
+ranges(gr)
+
+# Access the strand information
+strand(gr)
+
+# Access metadata columns
+mcols(gr)
+
+# Access a specific metadata column
+gr$score
+
+# Get the width of each range
+width(gr)
+
+# Get the number of ranges
+length(gr)
+```
+
+## Subsetting GRanges Objects
+
+```{r}
+#| echo: true
+#| include: true
+# Subset by index
+gr[1:3]
+
+# Subset by logical vector
+gr[width(gr) > 10]
+
+# Subset by chromosome
+gr[seqnames(gr) == "chr1"]
+
+# Subset by strand
+gr[strand(gr) == "+"]
+
+# Subset by metadata
+gr[gr$score > 10]
+
+# Subset by multiple conditions
+gr[seqnames(gr) == "chr2" & strand(gr) == "+"]
+```
+
+## Basic Range Operations
+
+```{r}
+#| echo: true
+#| include: true
+# Shift ranges by 5 base pairs  (--> start + 5, end + 5)
+shift(gr, 5)
+
+# Resize ranges to a width of 10 bp (start is unchanged - default)
+resize(gr, width = 10)
+
+# Resize ranges to a width of 10 bp, anchoring at the start
+resize(gr, width = 10, fix = "start")
+
+# Resize ranges to a width of 10 bp, anchoring at the end
+resize(gr, width = 10, fix = "end")
+
+# Narrow ranges by trimming from both ends
+narrow(gr, start = 2, end = -2)
+
+# Expand ranges by 5 bp on each side
+flank(gr, width = 5, both = TRUE)
+
+# Get the 5' flanking region
+flank(gr, width = 5, start = TRUE)
+
+# Get the 3' flanking region
+flank(gr, width = 5, start = FALSE)
+```
+
+# Interval Operations
+
+
+## Finding Overlaps Between Ranges
+The **GenomicRanges**  package provides efficient containers and methods for representing and manipulating genomic intervals, with a focus on overlap operations that are foundational in many bioinformatics analyses. Overlap‐finding functions return a **Hits**  object that encodes the relationships between two sets of ranges, enabling you to extract matching indices, count overlaps, and subset ranges based on their overlap patterns. Key functions include:
+
+- **`findOverlaps()`** : identifies all overlapping pairs between two `GRanges` objects.
+- **`queryHits()`**  / `subjectHits()`** : extract the query and subject indices from a `Hits` object, respectively.
+- **`countOverlaps()`** : for each range in one set, counts how many ranges in the other set overlap it.
+- **`subsetByOverlaps()`** : returns the subset of ranges that overlap any range in another set.
+- **`overlapsAny()`** : a logical vector indicating which ranges have at least one overlap in the other set.
+
+```{r}
+#| echo: true
+#| include: true
+# Create a second GRanges object
+gr1 <- GRanges("chr1", IRanges(c(5, 80, 329), width=20))
+gr2 <- GRanges("chr1", IRanges(c(10, 100, 300), width=15))
+
+# Find all overlapping pairs
+hits <- findOverlaps(gr1, gr2)
+hits
+# Once you have a **Hits**  object, `queryHits(hits)` returns the indices in
+# the **query**  (`gr1`) and `subjectHits(hits)` returns the indices in
+# the **subject**  (`gr2`) for each overlapping pair
+# Indices of overlapping ranges
+q_idx <- queryHits(hits)    # c(1, 3)
+s_idx <- subjectHits(hits)  # c(1, 3)
+
+# Access the actual ranges
+gr1[q_idx]
+gr2[s_idx]
+
+# Count overlaps of gr1 against gr2
+counts <- countOverlaps(gr1, gr2)
+counts
+
+gr1_overlapping <- subsetByOverlaps(gr1, gr2)
+gr1_overlapping
+
+has_overlap <- overlapsAny(gr1, gr2)
+has_overlap
+
+gr2 <- GRanges(
+  seqnames = c("chr1", "chr2", "chr3"),
+  ranges = IRanges(start = c(15, 18, 25), end = c(22, 28, 35)),
+  strand = c("+", "+", "-"),
+  name = c("A", "B", "C")
+)
+
+```
+
+## Nearest Neighbor Operations
+
+Nearest‐neighbor operations in the **GenomicRanges**  package allow you to query the closest or adjacent genomic intervals between two sets of ranges using functions like `nearest()`, `distance()`, `precede()`, and `follow()`. Each of these functions returns integer indices (or a `Hits` object) indicating which ranges in a “subject” set relate to each range in a “query” set, enabling you to quickly locate the closest overlap or upstream/downstream neighbor.
+
+1. `nearest()`
+The `nearest(x, subject, select="first", ignore.strand=FALSE)` function finds, for each range in **x** , the index of the closest range in **subject**  (ties broken arbitrarily). If **subject**  is omitted, **x**  is used as both query and subject, so each range’s nearest neighbor in the same set is returned (excluding itself when `select="first"`)
+2. `distance()`
+The `distance(x, y)` function computes the signed distance between each range in **x**  and the corresponding range in **y** , recycling shorter objects as needed. A distance of 0 indicates overlap; positive values indicate separation; negative values can occur for zero‐width ranges or self‐distance in certain contexts.
+3. `precede()`
+`precede(x, subject, select="first", ignore.strand=FALSE)` returns, for each range in **x** , the index of the nearest range in **subject**  that falls entirely **before**  it (i.e., with end < start of x). This lets you identify upstream neighbors on the same chromosome and strand (unless `ignore.strand=TRUE`).
+4. `follow()`
+`follow(x, subject, select="first", ignore.strand=FALSE)` returns, for each range in **x** , the index of the nearest range in **subject**  that falls entirely **after**  it (i.e., with start > end of x) . This identifies downstream neighbors on the same chromosome/strand by default.
+
+```{r}
+#| echo: true
+#| include: true
+# Find the nearest range in gr2 for each range in gr
+
+query   <- GRanges("chr1", IRanges(c(10, 20, 50), width=5))
+subject <- GRanges("chr1", IRanges(c(1, 15, 40, 60), width=5))
+
+# Find nearest subject range for each query range
+hits_nearest <- nearest(query, subject)
+hits_nearest
+distances <- distance(query, subject[1:3])
+distances
+
+# Find preceding subject range for each query range
+hits_precede <- precede(query, subject)
+hits_precede
+
+hits_precede2 <- precede(gr2, gr)
+hits_precede2
+
+# Find the following range
+hits_follow <- follow(query, subject)
+hits_follow
+```
+
+## Set Operations on Ranges
+
+```{r}
+#| echo: true
+#| include: true
+# Create two more GRanges objects for set operations
+library(GenomicRanges)
+gr_a <- GRanges(
+  seqnames = "chr1",
+  ranges = IRanges(start = c(10, 20, 30), end = c(15, 25, 35))
+)
+
+gr_b <- GRanges(
+  seqnames = "chr1",
+  ranges = IRanges(start = c(12, 22, 40), end = c(17, 27, 45))
+)
+
+# Union of ranges
+union(gr_a, gr_b)
+
+# Intersection of ranges
+intersect(gr_a, gr_b)
+
+# Difference of ranges (ranges in gr_a that don't overlap with gr_b)
+setdiff(gr_a, gr_b)
+```
+
+# Working with GRangesList
+
+GRangesList objects are useful for representing hierarchical relationships, such as exons grouped by transcript or peaks grouped by sample.
+
+```{r}
+#| echo: true
+#| include: true
+# Create a GRangesList
+grl <- GRangesList(
+  sample1 = GRanges(
+    seqnames = c("chr1", "chr2"),
+    ranges = IRanges(start = c(10, 20), end = c(20, 30))
+  ),
+  sample2 = GRanges(
+    seqnames = c("chr1", "chr3"),
+    ranges = IRanges(start = c(15, 40), end = c(25, 50))
+  )
+)
+
+# Display the GRangesList
+grl
+
+# Access elements of the list
+grl[[1]]
+grl$sample2
+
+# Get the length of each element
+elementNROWS(grl)
+
+# Unlist to get a single GRanges object
+unlist(grl)
+
+# Apply operations to each element
+endoapply(grl, shift, 5)
+```
+
+# Integration with Biostrings
+
+One of the  features of GenomicRanges is its integration with Biostrings, allowing you to extract and analyze sequences from genomic coordinates.
+
+```{r}
+#| echo: true
+#| include: true
+# Load required packages
+library(Biostrings)
+library(BSgenome.Hsapiens.UCSC.hg38)
+
+# Create a GRanges object for some genes
+genes <- GRanges(
+  seqnames = c("chr1", "chr2"),
+  ranges = IRanges(start = c(10000, 20000), end = c(10500, 20500)),
+  strand = c("+", "-"),
+  gene_id = c("gene1", "gene2")
+)
+
+# Extract DNA sequences for these regions
+# Note: In a real lesson, we would use actual genomic coordinates
+# This is just a demonstration of the syntax
+gene_seqs <- getSeq(BSgenome.Hsapiens.UCSC.hg19, genes)
+names(gene_seqs) <- genes$gene_id
+print(gene_seqs)
+
+gc_content <- letterFrequency(gene_seqs, "GC", as.prob = TRUE)
+print(gc_content)
+
+```
+
