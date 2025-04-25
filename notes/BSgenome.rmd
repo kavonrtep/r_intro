@@ -150,29 +150,17 @@ txdb <- TxDb.Dmelanogaster.UCSC.dm6.ensGene
 ## Core Extraction Functions
 
 
-- **`genes(txdb)`**
+- **`genes(txdb)`** Returns a `GRanges` of all gene coordinates.
 
-Returns a `GRanges` of all gene coordinates.
+- **`transcripts(txdb)`**  Returns a `GRanges` of all transcript coordinates (with `strand` information).
 
-- **`transcripts(txdb)`**
+- **`exonsBy(txdb, by="gene")`** A `GRangesList` of exons, grouped by gene.
 
-Returns a `GRanges` of all transcript coordinates (with `strand` information).
+- **`intronsByTranscript(txdb, use.names=TRUE)`** A `GRangesList` of introns, grouped by transcript.
 
-- **`exonsBy(txdb, by="gene")`**
+- **`cdsBy(txdb, by="tx")`** A `GRangesList` of coding sequences (CDS), grouped by transcript.
 
-A `GRangesList` of exons, grouped by gene.
+- **`promoters(txdb, upstream=N, downstream=M)`**  Given a `GRanges` (e.g. from `transcripts()` or `genes()`), returns the regions upstream/downstream around the “start” of each range (useful to define promoter windows).
 
-- **`intronsByTranscript(txdb, use.names=TRUE)`**
-
-A `GRangesList` of introns, grouped by transcript.
-
-- **`cdsBy(txdb, by="tx")`**
-
-A `GRangesList` of coding sequences (CDS), grouped by transcript.
-
-- **`promoters(txdb, upstream=N, downstream=M)`**
-
-Given a `GRanges` (e.g. from `transcripts()` or `genes()`), returns the regions upstream/downstream around the “start” of each range (useful to define promoter windows).
-
-All of these return `GRanges` or `GRangesList` objects that you can pass directly to `getSeq()` (from **BSgenome** ) or to overlap‐based functions in **GenomicRanges** .
+- All of these return `GRanges` or `GRangesList` objects that you can pass directly to `getSeq()` (from **BSgenome** ) or to overlap‐based functions in **GenomicRanges** .
 

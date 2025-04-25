@@ -1335,30 +1335,14 @@ $source_url
 <section id="core-extraction-functions" class="slide level2">
 <h2>Core Extraction Functions</h2>
 <ul>
-<li><strong><code>genes(txdb)</code></strong></li>
+<li><p><strong><code>genes(txdb)</code></strong> Returns a <code>GRanges</code> of all gene coordinates.</p></li>
+<li><p><strong><code>transcripts(txdb)</code></strong> Returns a <code>GRanges</code> of all transcript coordinates (with <code>strand</code> information).</p></li>
+<li><p><strong><code>exonsBy(txdb, by=&quot;gene&quot;)</code></strong> A <code>GRangesList</code> of exons, grouped by gene.</p></li>
+<li><p><strong><code>intronsByTranscript(txdb, use.names=TRUE)</code></strong> A <code>GRangesList</code> of introns, grouped by transcript.</p></li>
+<li><p><strong><code>cdsBy(txdb, by=&quot;tx&quot;)</code></strong> A <code>GRangesList</code> of coding sequences (CDS), grouped by transcript.</p></li>
+<li><p><strong><code>promoters(txdb, upstream=N, downstream=M)</code></strong> Given a <code>GRanges</code> (e.g. from <code>transcripts()</code> or <code>genes()</code>), returns the regions upstream/downstream around the “start” of each range (useful to define promoter windows).</p></li>
+<li><p>All of these return <code>GRanges</code> or <code>GRangesList</code> objects that you can pass directly to <code>getSeq()</code> (from <strong>BSgenome</strong> ) or to overlap‐based functions in <strong>GenomicRanges</strong> .</p></li>
 </ul>
-<p>Returns a <code>GRanges</code> of all gene coordinates.</p>
-<ul>
-<li><strong><code>transcripts(txdb)</code></strong></li>
-</ul>
-<p>Returns a <code>GRanges</code> of all transcript coordinates (with <code>strand</code> information).</p>
-<ul>
-<li><strong><code>exonsBy(txdb, by=&quot;gene&quot;)</code></strong></li>
-</ul>
-<p>A <code>GRangesList</code> of exons, grouped by gene.</p>
-<ul>
-<li><strong><code>intronsByTranscript(txdb, use.names=TRUE)</code></strong></li>
-</ul>
-<p>A <code>GRangesList</code> of introns, grouped by transcript.</p>
-<ul>
-<li><strong><code>cdsBy(txdb, by=&quot;tx&quot;)</code></strong></li>
-</ul>
-<p>A <code>GRangesList</code> of coding sequences (CDS), grouped by transcript.</p>
-<ul>
-<li><strong><code>promoters(txdb, upstream=N, downstream=M)</code></strong></li>
-</ul>
-<p>Given a <code>GRanges</code> (e.g. from <code>transcripts()</code> or <code>genes()</code>), returns the regions upstream/downstream around the “start” of each range (useful to define promoter windows).</p>
-<p>All of these return <code>GRanges</code> or <code>GRangesList</code> objects that you can pass directly to <code>getSeq()</code> (from <strong>BSgenome</strong> ) or to overlap‐based functions in <strong>GenomicRanges</strong> .</p>
 
 </section>
     </div>

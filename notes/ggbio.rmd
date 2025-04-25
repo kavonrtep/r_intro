@@ -1,0 +1,37 @@
+---
+title: "`ggbio` : Bioconductor Package for Genomic Data Visualization"
+format:
+  revealjs:
+    self-contained: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+
+## `ggbio`
+- `ggbio` extends the grammar of graphics (ggplot2) for biological data and supports all core Bioconductor data structures
+
+## Core Data Structures used in `ggbio`
+- GRanges: Genomic intervals (chromosome, start/end, strand)
+- GAlignments: Read alignments from BAM files (via Rsamtools)
+- VCF: Variant call format objects (via VariantAnnotation)
+- TxDb / GenomicFeatures: Gene/transcript models for annotation
+
+## Basic Plotting with `ggbio`
+- `ggbio` provides a simple interface for plotting genomic data
+- `autoplot()` function is used to create basic plots
+
+```{r}
+#| echo: true
+#| include: true
+library(ggbio)
+library(GenomicRanges)
+gr <- GRanges(
+  seqnames = Rle(c("chr1", "chr2"), c(3, 2)),
+  ranges = IRanges(start = c(1, 5, 10, 15, 20), end = c(4, 8, 12, 18, 25)),
+  strand = Rle(strand(c("+", "-", "+", "-", "+")))
+)
+```

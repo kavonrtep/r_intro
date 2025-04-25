@@ -44,6 +44,14 @@ head(codon_freq)  # show the six most frequent codons
 aa_for_codon <- GENETIC_CODE[names(codon_freq)]        # map each codon to its amino acid (including "*" for stop)
 # Note tapply() function is used to apply a function (sum) to subsets of data (codon_freq) defined by another vector (aa_for_codon).
 
+# If you don't  know how tapply works you can try it with a simple example
+var1 <- c(1, 2, 3, 4, 5, 6)
+var2 <- c("A", "B", "A", "B", "A", "B")
+# This will sum the values of var1 for each unique value in var2
+tapply(var1, var2, sum)
+#
+
+
 # Calculat the usage of each amino acid
 aa_totals <- tapply(codon_freq, aa_for_codon, sum)     # total counts per amino acid
 aa_totals <- sort(aa_totals, decreasing=TRUE)
@@ -70,6 +78,26 @@ for (AA in names(AMINO_ACID_CODE)){
     # expected codon usage is the frequency of the codon divided by the number of synonymous codons
     codon_usage[[AA]] <- codon_usage[[AA]]/sum(codon_usage[[AA]])/(1/length(codons))
 }
+
+# make plot for all AA which are coded by more than one codon
+codon_usage_2 <- unlist(codon_usage[sapply(codon_usage, length) > 1])
+# convert to data frame
+codon_usage_df <- data.frame(
+    AA = gsub("[.].+", "", names(codon_usage_2)),
+    Codon = gsub(".+[.]", "", names(codon_usage_2)),
+    ObsExp = codon_usage_2
+
+)
+codon_usage_df$AA_long <- AMINO_ACID_CODE[codon_usage_df$AA]
+
+library(ggplot2)
+ggplot(codon_usage_df, aes(x=Codon, y=ObsExp)) +
+    geom_bar(stat="identity") +
+    facet_wrap(~AA_long, scales = "free_x") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    labs(title="Codon Usage Bias in Yeast", x="Codon", y="Observed/Expected Ratio") +
+    theme_minimal()
+
 
 
 # TASK - are all start codons ATG?
