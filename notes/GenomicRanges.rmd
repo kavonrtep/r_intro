@@ -153,6 +153,9 @@ flank(gr, width = 5, start = TRUE)
 
 # Get the 3' flanking region
 flank(gr, width = 5, start = FALSE)
+
+# Restrict ranges to a specific region (e.g., positions 15 to 30)
+restrict(gr, start = 15, end = 30)
 ```
 
 # Interval Operations
@@ -331,7 +334,7 @@ genes <- GRanges(
 # Extract DNA sequences for these regions
 # Note: In a real lesson, we would use actual genomic coordinates
 # This is just a demonstration of the syntax
-gene_seqs <- getSeq(BSgenome.Hsapiens.UCSC.hg19, genes)
+gene_seqs <- getSeq(BSgenome.Hsapiens.UCSC.hg38, genes)
 names(gene_seqs) <- genes$gene_id
 print(gene_seqs)
 

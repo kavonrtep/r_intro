@@ -107,6 +107,8 @@ print(chr1_10kb)
 ```
 - Accessing entire chromosome sequences:
 ```{r}
+#| echo: true
+#| include: true
 chr1 <- genome_human$chr1
 print(chr1)
 ```
@@ -127,11 +129,16 @@ metadata(genome_human)
 
 ## TxDb - Transcript Database
 
-A **TxDb**  (transcript database) is an on‑disk SQLite representation of transcript annotations (genes, transcripts, exons, CDS, UTRs, etc.) for a given genome build. It lives in a Bioconductor package (e.g. `TxDb.Scerevisiae.UCSC.sacCer3.sgdGene`, `TxDb.Dmelanogaster.UCSC.dm6.ensGene`, etc.) and provides fast, indexed queries against gene models.
+A **TxDb**  (transcript database) is an on‑disk SQLite representation of transcript annotations:
 
+- genes
+- transcripts
+- exons
+- CDS, UTRs, etc
+for a given genome build. It lives in a Bioconductor package (e.g. `TxDb.Scerevisiae.UCSC.sacCer3.sgdGene`, `TxDb.Dmelanogaster.UCSC.dm6.ensGene`, etc.) and provides fast, indexed queries against gene models.
+- to see available TxDb packages - https://bioconductor.org/packages/3.21/data/annotation/
 
 ## Installing and Loading
-
 
 
 ```r
@@ -139,7 +146,7 @@ if (!requireNamespace("BiocManager", quietly=TRUE))
     install.packages("BiocManager")
 
 # Example: fly annotations
-BiocManager::install("TxDb.Dmelanogaster.UCSC.dm6.ensGene")
+  BiocManager::install("TxDb.Dmelanogaster.UCSC.dm6.ensGene")
 
 # Load the package
 library(TxDb.Dmelanogaster.UCSC.dm6.ensGene)

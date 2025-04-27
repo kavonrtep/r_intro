@@ -1,16 +1,3 @@
-# ---
-# title: "BSgenome: Bioconductor Package for Genome Sequences"
-# format:
-#   revealjs:
-#     self-contained: true
-# editor: visual
-# ---
-# <style>
-# .reveal {
-#   font-size: 160%;
-# }
-# </style>
-
 # ## Overview of BSgenome
 #
 # - **Purpose:**  Infrastructure for full reference genomes in R via Bioconductor
