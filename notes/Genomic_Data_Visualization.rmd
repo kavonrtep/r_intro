@@ -1,0 +1,268 @@
+---
+title: "Visualization of Genomic Data"
+format:
+  revealjs:
+    self-contained: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+
+## Packages for Genomic Data Visualization
+
+
+
+- **GGviz**
+- **trackViewer**
+- **ggbio**: Extends ggplot2 for genomic data visualization
+
+
+## Install some necessary packages
+
+```r
+BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
+BiocManager::install("TxDb.Hsapiens.UCSC.hg19.knownGene")
+
+```
+```{r}
+#| echo: true
+#| include: true
+#| messages: hide
+library(Gviz)
+library(trackViewer)
+library(GenomicRanges)
+library(rtracklayer)
+```
+## Example Data: CpG Islands
+```{r}
+#| echo: true
+#| include: true
+data(cpgIslands)
+class(cpgIslands)
+cpgIslands
+```
+## Plotting with Gviz
+- Function `AnnotationTrack()` creates a track object for plotting
+- `plotTracks()` function is he main interface when plotting single track objects, or lists of tracks linked together across the same genomic coordinates. The resulting plots are very similar to the graphical output of the UCSC Genome Browser
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2
+gen <- genome(cpgIslands)
+print(gen)
+chr <- seqlevels(cpgIslands)
+print(chr)
+atrack <- AnnotationTrack(cpgIslands, name = "CpG")
+plotTracks(atrack)
+```
+## Adding coordinates
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2
+
+gtrack <- GenomeAxisTrack()
+plotTracks(list(gtrack, atrack))
+```
+## Combining multiple tracks
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2
+
+gr1 <- GRanges(
+  seqnames = Rle(c("chr1", "chr2"), c(3, 2)),
+  ranges = IRanges(start = c(1, 5, 10, 15, 20), end = c(4, 8, 12, 18, 25)),
+  strand = Rle(strand(c("+", "-", "+", "-", "+")))
+)
+gr2 <- GRanges(
+  seqnames = Rle(c("chr1", "chr2"), c(3, 2)),
+  ranges = IRanges(start = c(2, 6, 11, 16, 21), end = c(5, 9, 13, 19, 26)),
+  strand = Rle(strand(c("+", "-", "+", "-", "+")))
+)
+track1 <- AnnotationTrack(gr1, name = "Track 1")
+track2 <- AnnotationTrack(gr2, name = "Track 2")
+plotTracks(list(gtrack, track1, track2))
+```
+Only the `chr1` region is shown in the plot - if region is not specified, the entire first chromosome is plotted.
+
+## Specifying the region for plotting
+Use the `from` and `to` arguments to specify the region of interest. The `chromosome` argument specifies the chromosome to plot.
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2
+plotTracks(list(gtrack, track1, track2), from = 1, to = 50,
+             chromosome = "chr2")
+```
+## Adding ideogram
+If ideogram data is available, it can be added to the plot using the `IdeogramTrack()` function. The `chromosome` argument specifies the chromosome to plot.
+
+Ideogram tracks are the one exception in all of Gviz’s track objects in the sense that they are not really displayed on the same coordinate system like all the other tracks. Instead, the current genomic location is indicated on the chromosome by a red box/line
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2
+print(gen)
+itrack <- IdeogramTrack(genome = gen, chromosome = chr)
+
+plotTracks(list(itrack, gtrack, atrack))
+```
+## Adding gene models
+
+```{r}
+#| echo: true
+#| include: true
+#
+data(geneModels)
+print(geneModels)
+
+```
+`geneModels` is a data frame object containing gene models for the human genome.
+
+## Adding gene models
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2
+
+grtrack <- GeneRegionTrack(geneModels, genome = gen,
+                           chromosome = chr, name = "Gene Model")
+
+plotTracks(list(itrack, gtrack, atrack, grtrack))
+```
+## Setting coordinates for plotting
+`plotTracks` supports the `from` and `to` arguments that let us choose an arbitrary genomic range to plot.
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2
+plotTracks(list(itrack, gtrack, atrack, grtrack),
+           from = 26700000, to = 26750000)
+```
+
+
+## Zooming to the base pair level
+When zooming further we may take a look at the actual genomic sequence at a given position
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 3
+
+library(BSgenome.Hsapiens.UCSC.hg19)
+strack <- SequenceTrack(BSgenome.Hsapiens.UCSC.hg19,
+                   chromosome = chr)
+plotTracks(list(itrack, gtrack, atrack, grtrack, strack),
+           from = 26591822, to = 26591852, cex = 0.8)
+```
+## Adding a quantitative track
+
+ We can add a quantitative track to the plot using the `DataTrack()` function. The `data` argument specifies the data to plot, and the `type` argument specifies the type of plot (e.g., "histogram", "density", "heatmap").
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 3
+# making example data
+set.seed(123)
+lim <- c(26700000, 26750000)
+coords <- seq(lim[1], lim[2], length.out = 101) |>
+  round()
+dat <- runif(100, min = -10, max = 10)
+dtrack <- DataTrack(data = dat, start = coords[-length(coords)],
+                    end = coords[-1], chromosome = chr, genome = gen,
+                    name = "Uniform")
+plotTracks(list(itrack, gtrack, atrack, grtrack, dtrack),
+           from = lim[1], to = lim[2])
+```
+
+## Changing type of quantitative track
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 3
+dtrack <- DataTrack(data = dat, start = coords[-length(coords)],
+                    end = coords[-1], chromosome = chr, genome = gen,
+                    name = "Uniform", type = "histogram")
+plotTracks(list(itrack, gtrack, atrack, grtrack, dtrack),
+           from = lim[1], to = lim[2])
+```
+## Modifying plot parameters
+
+
+## `TrackViewer` - another package for genomic data visualization
+Provide similar functionality to `Gviz` but with a different interface. It is designed to be more user-friendly and provides a more interactive experience.
+
+## Plot interaction data with `trackViewer`
+Chromatin interaction data is often stored in a format called `InteractionSet`, which is a specialized data structure for representing genomic interactions. The `trackViewer` package provides functions to visualize these interactions.
+(TAD - topolocical associated domains)
+```{r}
+library(trackViewer)
+library(InteractionSet)
+gi <- readRDS(system.file("extdata", "nij.chr6.51120000.53200000.gi.rds", package="trackViewer"))
+head(gi)
+
+```
+## Plotting interaction data
+Define TAD
+
+```{r}
+#| echo: true
+#| include: true
+
+# Here we define a border_color to highlight some regions
+gi$border_color <- NA ## highlight some regions
+gi$border_color[sample(seq_along(gi), 20)] <- sample(1:7, 20, replace=TRUE)
+## The TADs will be drawn as lines at points start(first), center point, end(second).
+tads <- GInteractions(
+  GRanges("chr6",
+          IRanges(c(51130001, 51130001, 51450001, 52210001), width = 20000)),
+  GRanges("chr6",
+          IRanges(c(51530001, 52170001, 52210001, 53210001), width = 20000)))
+range <- GRanges("chr6", IRanges(51120000, 53200000))
+heatmap <- gi2track(gi)
+# CTCF is a transcription factor that binds to DNA and is involved in chromatin organization
+# the CTCF binding sites are often used as anchors for chromatin interactions
+# ctcf data are base in ChIP-seq experiment
+ctcf <- readRDS(system.file("extdata", "ctcf.sample.rds", package="trackViewer"))
+ctcf
+```
+## Plotting interaction data
+
+```{r}
+#| echo: true
+#| include: true
+viewTracks(trackList(ctcf, heatmap, heightDist = c(1, 3)),
+           gr=range, autoOptimizeStyle = TRUE)
+```
+## Annotation of interaction data
+```{r}
+#| echo: true
+#| include: true
+## add TAD information
+viewTracks(trackList(ctcf, heatmap, heightDist = c(1, 3)),
+           gr=range, autoOptimizeStyle = TRUE)
+## add TAD information
+addInteractionAnnotation(tads, "heatmap", grid.lines, gp=gpar(col="#E69F00", lwd=3, lty=3))
+```
+## Highlighting regions with high score
+```{r}
+#| echo: true
+#| include: true
+gi_sub <- gi[order(gi$score, decreasing = TRUE)]
+gi_sub <- head(gi_sub[distance(first(gi_sub), second(gi_sub))>200000], n=5)
+start(regions(gi_sub)) <- start(regions(gi_sub))-40000
+end(regions(gi_sub)) <- end(regions(gi_sub))+40000
+viewTracks(trackList(ctcf, heatmap, heightDist = c(1, 3)),
+           gr=range, autoOptimizeStyle = TRUE)
+## add TAD information
+addInteractionAnnotation(tads, "heatmap", grid.lines, gp=gpar(col="#E69F00", lwd=3, lty=3))
+addInteractionAnnotation(gi_sub, "heatmap", grid.polygon, gp=gpar(col="red", lwd=2, lty=2, fill=NA))
+```
