@@ -1,6 +1,6 @@
 # Phylogenetic Analysis of Human HIV and SIV in Monkeys phylogenetics tree
 
-Human Immunodeficiency Viruses (HIV-1 and HIV-2) are closely related to Simian Immunodeficiency Viruses (SIVs) found in various African primate species. Understanding the evolutionary relationships between HIV and SIV strains can reveal the origins of HIV and its transmission pathways from primates to humans. Human HIV include HIV-1 and HIV-2 variant. Your task will be to visualize HIV sequences fromt human and SIV from monkeys and extract clade with HIV-1 and HIV-2 sequences and identify corresponding monkeys SIVs
+Human Immunodeficiency Viruses (HIV-1 and HIV-2) are closely related to Simian Immunodeficiency Viruses (SIVs) found in various African primate species. Understanding the evolutionary relationships between HIV and SIV strains can reveal the origins of HIV and its transmission pathways from primates to humans. Human HIV include HIV-1 and HIV-2 variant. Your task will be to visualize HIV sequences from human and SIV from monkeys and extract clade with HIV-1 and HIV-2 sequences and identify corresponding monkeys SIVs
 
 
 In this assignment you will:
@@ -14,7 +14,7 @@ In this assignment you will:
 All work will use the **ape**  package and base R.  The tree file is now at `data/phylogenetics/HIV_env_monkeys.nhx`.
 
 
----
+
 
 ### Task 1: Load, Root, and Inspect the Tree 
 
@@ -50,10 +50,11 @@ How many HIV-1 and HIV-2 tips are there?
 **Find**  the MRCA node for each clade:
 
  
-**Extract**  each subtree:
+**Extract**  each subtree
 
 **Plot**  the two subtrees side by side:
 
 
-### Task 5: List Monkey Host Taxa 
+### Task 5: List SIV tips for each clade
+
 
