@@ -150,3 +150,4 @@ for (i in seq_along(legend_labels)) {
   grid.text(label = legend_labels[i], x = unit(1, "lines"), y = y, just = c("left","center"))
 }
 popViewport()
+

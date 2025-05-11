@@ -1,0 +1,528 @@
+---
+title: "Using phylogenetic trees in R"
+format:
+  revealjs:
+    self-contained: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+
+
+
+
+
+# Phylogenetic Analysis in R with `ape` and `treeio`
+
+
+Phylogenetic trees are key to understanding evolutionary relationships. In R, the ape package (Analysis of Phylogenetics and Evolution) and the Bioconductor treeio package provide powerful tools to import, manipulate, and visualize phylogenetic trees.
+
+These packages can be used to:
+
+- Load phylogenetic trees into R (from formats like Newick/Nexus) using ape (and treeio).
+- Create simple example trees
+- Perform common tree manipulations: rooting/unrooting, ladderizing, pruning (dropping tips), and basic traversal of tree structure.
+- Visualize trees using base ape plotting (via plot.phylo) and enhanced graphics with ggtree (built on treeio).
+- Annotate trees with metadata (e.g. traits, taxonomy, geography) and visualize these data on the tree (e.g. coloring tips by trait).
+
+
+## Packages installation:
+
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+if (!requireNamespace("BiocManager", quietly=TRUE))
+  install.packages("BiocManager")
+if (!requireNamespace("ape", quietly=TRUE))
+  install.packages("ape", update=FALSE)
+if (!requireNamespace("treeio", quietly=TRUE))
+    BiocManager::install("treeio", update=FALSE)
+if (!requireNamespace("ggtree", quietly=TRUE))
+    BiocManager::install("ggtree", update=FALSE)
+if (!requireNamespace("phangorn", quietly=TRUE))
+    install.packages("phangorn", update=FALSE)
+
+```
+## Load packages
+```{r}
+#| echo: true
+#| include: true
+library(ape)
+library(phangorn)
+library(treeio)
+library(ggtree)
+```
+## `ape` package
+
+`ape` provides functions to read and write tree files, to store trees in R as objects of class `phylo`, and to manipulate and analyze these trees. With `ape`, you can perform tasks like computing distances, ancestral state reconstruction, and comparative analysis, but in this lesson we focus on tree handling and basic plotting. Ape’s base plotting functions (like `plot.phylo`) produce static phylograms or cladograms using base R graphics.
+
+
+
+## Functions to read and write trees
+
+`read.tree()`: Reads a tree from a file in Newick
+- Newick format uses parentheses to represent the tree structure, with branch lengths and node labels.
+- Example: `((A:0.1,B:0.2):0.3,C:0.4);`
+
+```{r}
+#| echo: true
+#| include: true
+newick_tree <- "((A:0.1,B:0.2):0.3,C:0.4);"
+tree <- read.tree(text = newick_tree)
+plot(tree)
+axis(1)
+
+```
+## Plotting trees with `ape`
+
+- `ape` provides a function `plot.phylo()` - it can be invoked by `plot()` function on `phylo` objects.
+
+```{r}
+#| echo: true
+#| include: true
+tr <- read.tree(text = "((Pan:5,Human:5):2,Gorilla:7);")
+par(mfrow=c(2,3))
+plot(tr, type = "cladogram", main = "cladogram") ; plot(tr, type = "unrooted", main="unrooted")
+plot(tr, type = "fan", main = "fan"); plot(tr, type = "radial", main = "radial")
+plot(tr, type = "tidy", main = "tidy")
+```
+## Loading tree from file
+
+```{r}
+#| echo: true
+#| include: true
+tr_dentist <- read.tree("./data/phylogenetics/HIV_dentist.nhx")
+plot(tr_dentist)
+
+```
+
+## Properties of `phylo` class
+```{r}
+#| echo: true
+#| include: true
+tr <- rtree(5 ) # random tree with 5 tips
+print(tr)
+class(tr)
+str(tr)
+names(tr)
+```
+## Properties of `phylo` class
+- `edge`: a matrix with two columns, each row represents an edge in the tree.
+
+```{r}
+#| echo: true
+#| include: true
+plot.phylo(tr, type = "tidy", show.tip.label = TRUE, cex = 0.5)
+# add node labels to identify internal nodes
+print(tr$edge)
+```
+## Properties of `phylo` class
+- `tip.label`: a character vector with the labels of the tips (leaves) of the tree.
+- `edge.length`: a numeric vector with the lengths of the edges in the tree.
+```{r}
+#| echo: true
+#| include: true
+print(tr$tip.label)
+print(tr$edge.length)
+plot(tr, type ='tidy', show.tip.label = TRUE, cex = 0.5)
+axis(1)
+```
+## Properties of `phylo` class
+```{r}
+#| result: true
+tr$tip.label  <- as.character(1:Ntip(tr))
+tr$node.label <- as.character((Ntip(tr)+1):(Ntip(tr)+Nnode(tr)))
+cat("Edge matrix:\n")
+print(tr$edge)
+plot(
+  tr,
+  type            = "phylogram",     # style of tree
+  use.edge.length = FALSE,           # ignore branch lengths here
+  show.tip.label  = TRUE,            # draw tr$tip.label
+  show.node.label = TRUE,            # draw tr$node.label
+  label.offset    = 0.05,             # space between tips/nodes and text
+  cex             = 1,             # text size
+  edge.color      = "darkgray",      # branch color
+  main            = "Tree with Numbered Tips, Nodes, and Edges"
+)
+edgelabels(
+  text = seq_len(nrow(tr$edge)),   # 1,2,…,#edges
+  frame = "none",                   # no box
+  adj   = 0.5,                      # center on branch midpoint
+  cex   = 1,
+  col = "red"
+)
+```
+## Manipulating trees
+
+- `is.rooted()`: Check if the tree is rooted.
+- `unroot()`: Unroot a tree.
+- `root()`: Root a tree at a specified node or tip.
+
+```{r}
+#| echo: true
+#| include: true
+tips <- c("Outgroup", paste0("Species", 1:5))
+set.seed(123)
+unrooted_tree <- rtree(6, tip.label = tips, rooted = FALSE)
+is.rooted(unrooted_tree)
+plot(unrooted_tree, main = "Unrooted tree")
+```
+## Rooting a tree
+```{r}
+#| echo: true
+#| include: true
+outgroup <- which(unrooted_tree$tip.label == "Outgroup")
+rooted_tree <- root(unrooted_tree, outgroup = "Outgroup", resolve.root = TRUE)
+is.rooted(rooted_tree)
+plot(rooted_tree, main = "Rooted tree")
+```
+## Rooting a tree
+```{r}
+#| echo: true
+#| include: true
+# reroot the tree at a different node
+rooted_tree <- root(unrooted_tree, outgroup = "Species1", resolve.root = TRUE)
+plot(rooted_tree, main = "Rooted tree at Species1")
+```
+## Ladderizing a tree
+- Ladderizing a tree means ordering the branches so that the tree has a tidy, ladder-like appearance (one side of each split has the smaller clade).
+- This doesn’t change the evolutionary relationships at all—it only affects the ordering of tips
+
+```{r}
+# | echo: true
+# | include: true
+# Ladderize a tree
+tree2 <- rtree(8)
+par(mfrow=c(1,2))
+plot(tree2, main = "Original ordering")
+plot(ladderize(tree2), main = "After ladderize()")
+```
+
+## Pruning and dropping tips
+ - Often, you might want to prune a tree to remove certain tips (species) – for example, if you want to focus on a subset or if some tips have no data for your analysis.
+ - You can use the `drop.tip()` function to remove tips from a tree.
+
+```{r}
+#| echo: true
+#| include: true
+# Create a random tree with 10 tips
+tr <- rtree(10)
+par(mfrow=c(1,2))
+plot(tr, main = "Original tree")
+# Drop tips "t1" and "t2"
+pruned_tree <- drop.tip(tr, c("t1", "t2"))
+plot(pruned_tree, main = "Pruned tree")
+```
+## Extracting clades
+
+Sometimes you want to isolate a subtree (clade) or inspect specific parts of a tree. Ape has tools to help with that:
+
+- `getMRCA(tree, tips=c(...))`: finds the most recent common ancestor (MRCA) node of a given set of tips. It returns the node number (an integer index used internally in the phylo object).
+- `extract.clade(tree, node)` : extracts the subtree/clade descended from a given internal node. You can get the node from getMRCA or if you happen to know an internal node number.
+- `nodepath(tree, from=NULL, to=NULL)`: returns the sequence of node indices along the path between two nodes (by default, from root to each tip). This is useful for traversal or finding ancestor lineages.
+
+## Understanding node numbering
+- Tip nodes are numbered 1 to N (where N is number of tips)
+- Internal nodes are numbered (N+1) to (N + Nnode) where Nnode is number of internal nodes.
+- The `tree$edge matrix` has two columns: `parent` and `child` for each edge.
+- Internal nodes are typically referred to by number. For example, if tree$Nnode == 2 and Ntip == 3, then internal nodes are 4 and 5 (if tips are 1,2,3).
+
+```{r}
+#| result: true
+set.seed(123)
+tr <- rtree(3) # random tree with 5 tips
+tr$tip.label  <- as.character(1:Ntip(tr))
+tr$node.label <- as.character((Ntip(tr)+1):(Ntip(tr)+Nnode(tr)))
+plot(
+  tr,
+  type            = "phylogram",     # style of tree
+  use.edge.length = FALSE,           # ignore branch lengths here
+  show.tip.label  = TRUE,            # draw tr$tip.label
+  show.node.label = TRUE,            # draw tr$node.label
+  label.offset    = 0.05,             # space between tips/nodes and text
+  cex             = 1,             # text size
+  edge.color      = "darkgray",      # branch color
+  main            = "Tree with Numbered Tips, Nodes, and Edges"
+)
+edgelabels(
+  text = seq_len(nrow(tr$edge)),   # 1,2,…,#edges
+  frame = "none",                   # no box
+  adj   = 0.5,                      # center on branch midpoint
+  cex   = 1,
+  col = "red"
+)
+```
+## Getting MRCA
+
+```{r}
+#| echo: true
+#| include: true
+# Get the MRCA of tips 1 and 2
+mrca_node <- getMRCA(tr, c("1", "2"))
+print(mrca_node)
+plot(tr, show.tip.label = TRUE, show.node.label = TRUE,
+     type = "phylogram", use.edge.length = FALSE, tip.color = c(2,2,1))
+```
+## Extracting clades descended from MRCA
+```{r}
+#| echo: true
+#| include: true
+clade <- extract.clade(tr, mrca_node)
+plot(clade, show.tip.label = TRUE, show.node.label = TRUE,
+     type = "phylogram", use.edge.length = FALSE)
+```
+## Extracting clades descended from MRCA
+```{r}
+#| echo: true
+#| include: true
+tr_dentist_rooted <- root(tr_dentist, outgroup = which(tr_dentist$tip.label %in% "isolate_ELI/19-301"), resolve.root = TRUE)
+MRCA_node <- getMRCA(tr_dentist_rooted, grep("Dentist", tr_dentist_rooted$tip.label))
+tr_dentist_clade <- extract.clade(tr_dentist_rooted, MRCA_node)
+par(mfrow=c(1,2))
+color <- grepl("Dentist", tr_dentist_rooted$tip.label) + 1
+plot(tr_dentist_rooted, type = "phylogram", use.edge.length = FALSE, tip.color = color)
+plot(tr_dentist_clade, type = "phylogram", use.edge.length = FALSE)
+```
+## Basic plotting with `plot.phylo`
+The simplest way to plot a tree in R is: `plot(my_tree)`
+
+If `my_tree` is a `phylo` object, ape’s S3 method `plot.phylo` is called. By default, it plots a **phylogram**  (branches with lengths) with the root at the bottom and tips at the top (cladogram style). Tips are labeled by their names, and branch lengths (if present) determine horizontal distances.
+
+You can customize the appearance with many arguments:
+
+- `type`: `"phylogram"` (default) or `"cladogram"` (which ignores branch lengths and evenly spaces the tips horizontally), `"fan"` (radial tree), `"unrooted"` (unrooted layout), `"radial"` (similar to fan).
+- `edge.color`, `edge.width`, `edge.lty`: for branch line appearance.
+- `tip.color`, `cex`: color and size of tip labels.
+- `use.edge.length`: if `FALSE`, even a phylogram is drawn as cladogram (no length scaling).
+- `main`, `sub`: to add title or subtitle.
+- `direction`: `"rightwards"` (default), `"leftwards"`, `"upwards"`, `"downwards"` to orient the root.
+
+## Basic plotting with `plot.phylo`
+```{r}
+#| echo: true
+#| include: true
+data(bird.orders)
+plot(bird.orders, cex=0.6, main="Bird Orders (phylogram)")  # default phylogram
+```
+## Basic plotting with `plot.phylo`
+```{r}
+#| echo: true
+#| include: true
+plot(bird.orders, type="fan", cex=0.7, tip.color="blue", main="Bird Orders (fan layout)")
+```
+
+## Basic plotting with `plot.phylo`
+```{r}
+#| echo: true
+#| include: true
+plot(bird.orders, type="unrooted", cex=0.7, tip.color="blue", main="Bird Orders (unrooted layout)")
+```
+## Adding annotations in base plots
+Ape provides functions to add to an existing tree plot:
+
+- `tiplabels()` can add symbols or text next to tip labels (at the tips).
+- `nodelabels()` can add labels to internal nodes (e.g., bootstrap values or node IDs).
+- `edgelabels()` to label branches.
+
+## Adding annotations in base plots
+
+For example, after plotting, `nodelabels()` with no arguments will put numbers at internal nodes. This can be useful to identify node IDs for use with `extract.clade`, etc., by visual inspection.
+
+```{r}
+#| echo: true
+#| include: true
+plot(bird.orders, cex=0.6, main="Bird Orders (phylogram)")
+nodelabels(frame = "circle", cex = 0.5, col = "red")
+```
+## Setting colors for tip labels
+```{r}
+#| echo: true
+#| include: true
+# Set colors for tip labels
+tip_colors <- ifelse(bird.orders$tip.label %in% c("Anseriformes", "Galliformes"), "red", "black")
+plot(bird.orders, cex=1, main="Bird Orders (phylogram)", tip.color=tip_colors)
+```
+## Setting colors for tip labels
+set color for clade common to `Anseriformes` and `Struthioniformes` to red
+```{r}
+#| echo: true
+#| include: true
+mrca_node <- getMRCA(bird.orders, c("Anseriformes", "Struthioniformes"))
+clade <- extract.clade(bird.orders, mrca_node)
+tip_labels_for_clade <- clade$tip.label
+tip_colors <- ifelse(bird.orders$tip.label %in% tip_labels_for_clade, "red", "black")
+plot(bird.orders, cex=1, main="Bird Orders (phylogram)", tip.color=tip_colors)
+```
+## Visualizing trees with `ggtree`
+The plot.phylo is using base R graphics, but `ggtree` is a package that extends the `ggplot2` framework to visualize phylogenetic trees.
+
+```{r}
+#| echo: true
+#| include: true
+nwk <- system.file("extdata", "sample.nwk", package="treeio")
+tree <- read.tree(nwk)
+ggplot(tree, aes(x, y)) + geom_tree() + theme_tree()
+```
+## Visualizing trees with `ggtree`
+The function, `ggtree()`, was implemented as a shortcut to visualize a tree, and it works exactly the same as shown above.
+```{r}
+#| echo: true
+#| include: true
+ggtree(tree, color="firebrick", size=2, linetype="dotted")
+```
+## Visualizing trees with `ggtree`
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 3
+#| fig-width: 3
+ggtree(tree, ladderize=FALSE)
+ggtree(tree, branch.length="none")
+```
+## ggtree layouts
+```{r}
+#| echo: false
+#| include: true
+#| fig-show: "hold"
+#| fig-height: 1.3
+#| fig-width: 1.3
+#| layout-ncol: 3
+set.seed(2017-02-16)
+tree <- rtree(50)
+ggtree(tree)
+ggtree(tree, layout="roundrect")
+ggtree(tree, layout="slanted")
+ggtree(tree, layout="ellipse")
+ggtree(tree, layout="circular")
+ggtree(tree, layout="fan", open.angle=120)
+ggtree(tree, layout="equal_angle")
+ggtree(tree, layout="daylight")
+ggtree(tree, branch.length='none')
+ggtree(tree, layout="ellipse", branch.length="none")
+ggtree(tree, branch.length='none', layout='circular')
+ggtree(tree, layout="daylight", branch.length = 'none')
+```
+## Phylogenetic Tree Annotation
+
+ - Adding labels, colors, and other annotations to the tree.
+
+    - `geom_tiplab()`: Add tip labels to the tree.
+    - `geom_nodelab()`: Add node labels to the tree.
+    - `geom_treescale()`: Add a scale bar to the tree.
+```{r}
+#| echo: true
+#| include: true
+
+ggtree(tree) +
+  geom_tiplab(size=3, color="blue") +
+  geom_treescale(x=0.5, y=0.5, width=0.1)
+```
+## Customizing tree appearance
+
+Since ggtree is ggplot-based, you can use typical ggplot theme elements. For instance:
+
+- `theme_tree()` is a preset minimal theme for tree plots (it’s usually applied by default).
+- You can add `+ xlim(...)` or `ylim(...)` to adjust spacing.
+- Use `geom_point2()` or `geom_nodepoint()` to add symbols at nodes, `geom_text2()` to add text at nodes (with automatic detection of internal vs tip), etc. For example, `geom_nodepoint(color="red", size=2)` would put red dots at all internal nodes.
+
+## Highlighting or annotating clades
+
+ggtree has special layers like `geom_hilight(node=..., fill="yellow")` to highlight a clade (shading the area under a clade), or `geom_cladelabel(node=..., label="Clade X")` to mark a clade with a text label. You must specify the node number of the clade's root (which you can get via `getMRCA` or visually from a plotted tree with `identify()` or using `viewClade()` interactively). These are beyond the basics, but worth mentioning as possibilities.
+
+For example, if we know node 30 in `bird.orders` is the MRCA of a certain group of birds (just as an example), we could do
+
+```{r}
+#| echo: true
+#| include: true
+ggtree(bird.orders) +
+  geom_tiplab() + geom_treescale() +
+  geom_hilight(node=30, fill="goldenrod", alpha=0.3) + ggplot2::xlim(0, 50)
+
+
+```
+## Annotation Treed with Metadata (Traits, Geography, etc.)
+
+In evolutionary studies, we often have additional data for each tip (or sometimes internal nodes) — for example:
+
+
+- **Traits**  of species (body size, habitat, etc.)
+- **Taxonomic info**  (like grouping species into families)
+- **Geographical distribution**  or **host information**  (for pathogen phylogenies, e.g., virus host species)
+- **Temporal data**  (like sample collection year)
+- **Statistical analysis results**  mapped onto branches or nodes (like dN/dS ratios on branches, or ancestral state probabilities at nodes)
+
+The goal is to **attach these data to the tree**  and visualize them effectively.
+
+## Combining Tree with Tip Data
+The `treeio` package defines a data structure that can hold a tree plus associated data. However, we don’t need to manually construct that to make use of data in ggtree. Instead, ggtree provides a handy operator `%<+%` (think “attach data”) that allows us to attach a data frame of information to a tree plot
+
+```{r}
+#| echo: true
+#| include: true
+
+# Simulate a tree and trait data
+tree_example <- rtree(5, tip.label = LETTERS[1:5])  # random tree with tips A, B, C, D, E
+# Create a data frame of traits for each tip
+trait_data <- data.frame(
+  label = LETTERS[1:5],
+  Status = c("Endangered", "Not Endangered", "Not Endangered", "Endangered", "Endangered")
+)
+trait_data
+```
+## Attaching data to the tree
+Here, `ggtree(tree_example) %<+% trait_data` attaches the data, and then `geom_tiplab(aes(color=Status))` uses the `Status` column to color the tip labels.
+```{r}
+p <- ggtree(tree_example) %<+% trait_data +
+  geom_tiplab(aes(color = Status), size = 4) +
+  theme_tree() +
+  scale_color_manual(values = c("red", "green"))
+p
+```
+## Attaching data to the tree
+```{r}
+p + geom_tippoint(aes(color = Status), size = 3)
+```
+## Attaching data to the tree - continuose trait example
+```{r}
+#| echo: true
+#| include: true
+# Simulate a tree and continuous trait data
+tree_example <- rtree(20, tip.label = LETTERS[1:5])
+# Create a data frame of continuous traits for each tip
+trait_data <- data.frame(
+  label = LETTERS[1:20],
+  TraitValue = rnorm(20, mean = 5, sd = 2)
+)
+p <- ggtree(tree_example) %<+% trait_data +
+  geom_tippoint(aes(color = TraitValue), size = 6)
+p
+```
+
+## Attaching heatmap to the tree:
+
+```{r}
+#| echo: true
+#| include: true
+beast_file <- system.file("examples/MCC_FluA_H3.tree", package="ggtree")
+beast_tree <- read.beast(beast_file)
+genotype_file <- system.file("examples/Genotype.txt", package="ggtree")
+genotype <- read.table(genotype_file, sep="\t", stringsAsFactor=F)
+p <- ggtree(beast_tree, mrsd="2013-01-01") +
+    geom_tiplab(size=2, align=TRUE, linesize=.5) +
+    theme_tree2()
+p
+```
+## Attaching heatmap to the tree:
+```{r}
+head(genotype)
+gheatmap(p, genotype, offset=8, width=0.6,
+        colnames=FALSE, legend_title="genotype") +
+    scale_x_ggtree()
+
+```
