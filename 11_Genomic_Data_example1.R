@@ -47,8 +47,9 @@ brca_id  # should be 672 for BRCA1
 # 2. Retrieve BRCA1 gene, exons, introns, and transcripts
 brca_gene <- genes(txdb, filter = list(gene_id = brca_id))
 brca_exons <- exons(txdb, filter = list(gene_id = brca_id))
-brca_introns <- intronsByTranscript(txdb, use.names = TRUE)[[as.character(brca_id)]]
 brca_transcripts <- transcripts(txdb, filter = list(gene_id = brca_id))
+
+brca_introns <- intronsByTranscript(txdb, use.names = TRUE)[brca_transcripts$tx_name]
 
 # Examine exon statistics
 length(brca_exons)         # total exons across all transcripts
