@@ -33,8 +33,8 @@ library(matrixStats)  # For computing row variances
 # - countData: Contains raw gene expression counts (rows: genes, columns: samples).
 # - colData: Contains sample metadata (e.g., condition, sequencing type).
 # Update file paths as needed.
-countData <- read.delim("data/deseq/pasilla_gene_counts.tsv", row.names = 1)
-colData <- read.csv("data/deseq/pasilla_sample_annotation.csv", row.names = 1)
+countData <- read.delim("data/pasilla_gene_counts.tsv", row.names = 1)
+colData <- read.csv("data/pasilla_sample_annotation.csv", row.names = 1)
 
 # Background on the pasilla dataset:
 # This dataset comes from an RNA-Seq experiment (Brooks et al. 2010) that investigates

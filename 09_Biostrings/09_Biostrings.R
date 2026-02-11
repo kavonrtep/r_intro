@@ -121,8 +121,8 @@ print(match_result_mismatch)
 # -----------------------------------------------------------------------------
 
 # Define file paths for FASTA files (adjust the paths as needed)
-fasta_file_1 <- "../data/seq_data/someORF.fa"
-fasta_file_2 <- "../data/seq_data/dm3_upstream2000.fa.gz"
+fasta_file_1 <- "data/seq_data/someORF.fa"
+fasta_file_2 <- "data/seq_data/dm3_upstream2000.fa.gz"
 
 # Read a FASTA file containing DNA sequences
 dna_seq_fasta <- readDNAStringSet(fasta_file_1)
@@ -135,7 +135,7 @@ print("DNA sequences from gzipped FASTA file:")
 print(dna_seq_fasta_gz)
 
 # Read a protein sequence from a FASTA file
-protein_fasta_file <- "../data/seq_data/UP000000625.fasta.gz"
+protein_fasta_file <- "data/seq_data/UP000000625.fasta.gz"
 protein_seq_fasta <- readAAStringSet(protein_fasta_file)
 print("Protein sequences from FASTA file:")
 print(protein_seq_fasta)
@@ -146,7 +146,7 @@ print(protein_seq_fasta)
 # -----------------------------------------------------------------------------
 
 # Define the file path for the MSA file
-aln_file <- "../data/seq_data/example_msa.fasta"
+aln_file <- "data/seq_data/example_msa.fasta"
 # Read the multiple sequence alignment; here we assume an amino acid alignment.
 aln <- readAAMultipleAlignment(aln_file, format = "fasta")
 print("Multiple sequence alignment:")

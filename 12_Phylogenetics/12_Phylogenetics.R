@@ -75,7 +75,7 @@ plot(tr, type = "tidy", main = "tidy")
 
 # ## Loading tree from file
 
-tr_dentist <- read.tree("./data/phylogenetics/HIV_dentist.nhx")
+tr_dentist <- read.tree("data/phylogenetics/HIV_dentist.nhx")
 plot(tr_dentist)
 
 # ## Properties of `phylo` class
