@@ -62,6 +62,7 @@
 
 getwd()
 # setwd("C:/your/path/here")  # Uncomment and modify this line to change your working directory.
+# Alternatively, use the RStudio interface to set the working directory from file explorer.
 
 ######################## 1. LANGUAGE FUNDAMENTALS ##############################
 

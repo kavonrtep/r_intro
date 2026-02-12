@@ -15,6 +15,11 @@
 #   3. Run this script in RStudio, and modify as needed.
 ################################################################################
 
+# Make sure your working directory is set to the location of this script
+# Use getwd() to check your current working directory and setwd() to change it if needed.
+# or use the RStudio interface to set the working directory to the folder containing this script.
+
+
 # ----------------------------- #
 # 1. Load the Bedgraph Data     #
 # ----------------------------- #
@@ -81,3 +86,8 @@ legend("topright", legend = c("Score <= 5", "Score > 5"),
 #   - Experiment by modifying the color threshold or exploring other plotting options.
 #
 #
+
+# TASK:
+# 1. Export plot to a PDF file named "chr1_chipseq_plot.pdf" in output directory.
+# 2. Change the color threshold to 20 and observe how the plot changes.
+

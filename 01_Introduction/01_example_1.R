@@ -16,6 +16,9 @@
 # ----------------------------- #
 # 1. Loading the CSV Data File  #
 # ----------------------------- #
+# Make sure your working directory is the same as location of this script
+# Use getwd() to check your current working directory and setwd() to change it if needed.
+# or use the RStudio interface to set the working directory to the folder containing this script.
 
 # Read the CSV file into a data frame called 'df'
 df <- read.csv("data/sample_data.csv", header = TRUE, stringsAsFactors = FALSE)
