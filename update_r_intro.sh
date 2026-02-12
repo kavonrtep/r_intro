@@ -7,7 +7,7 @@
 set -e
 
 DEST="$HOME/r_intro"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 
 # Pull latest changes
 echo "Pulling latest changes..."
