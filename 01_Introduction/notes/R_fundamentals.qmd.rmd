@@ -1,0 +1,297 @@
+---
+title: "R Fundamentals"
+format:
+  revealjs:
+    self-contained: true
+editor: visual
+---
+
+## Variables and Assignment
+
+- Use `<-` for assignment (preferred in R)
+- Variable names: lowercase, underscores, descriptive
+
+```{r}
+#| echo: true
+#| include: true
+x <- 10
+y <- 5
+z <- x + y
+z
+```
+
+## Basic Math Operations
+
+```{r}
+#| echo: true
+#| include: true
+10 + 5     # addition
+10 - 5     # subtraction
+10 * 5     # multiplication
+10 / 3     # division
+10^2       # exponentiation
+```
+
+## Built-in Math Functions
+
+```{r}
+#| echo: true
+#| include: true
+sqrt(16)      # square root
+log(100)      # natural logarithm
+log10(100)    # log base 10
+exp(1)        # e^1
+abs(-7)       # absolute value
+round(3.14159, 2)
+```
+
+## Vectors
+
+- Vectors store multiple values of the **same type**
+- Created with `c()`
+
+```{r}
+#| echo: true
+#| include: true
+heights <- c(1.72, 1.85, 1.63, 1.91)
+genes   <- c("BRCA1", "TP53", "MYC")
+is_expressed <- c(TRUE, FALSE, TRUE)
+```
+
+## Vector Indexing
+
+- R uses **1-based** indexing
+
+```{r}
+#| echo: true
+#| include: true
+genes <- c("BRCA1", "TP53", "MYC", "EGFR")
+genes[1]          # first element
+genes[c(1, 3)]    # first and third
+genes[-2]         # all except second
+```
+
+## Logical Indexing
+
+```{r}
+#| echo: true
+#| include: true
+counts <- c(120, 5, 340, 0, 89)
+counts > 50
+counts[counts > 50]
+```
+
+- Logical operators: `>`, `<`, `>=`, `<=`, `==`, `!=`
+- Combine with `&` (and), `|` (or)
+
+
+## Useful Vector Functions
+
+```{r}
+#| echo: true
+#| include: true
+x <- c(12, 45, 3, 78, 22)
+length(x)
+sum(x)
+mean(x)
+min(x)
+max(x)
+sort(x)
+```
+
+## Vectorized Operations
+
+- Arithmetic works **element-wise** on vectors
+
+```{r}
+#| echo: true
+#| include: true
+expression_A <- c(120, 340, 55)
+expression_B <- c(95, 410, 48)
+fold_change  <- expression_A / expression_B
+fold_change
+log2(fold_change)
+```
+
+## Factors
+
+- Represent **categorical data** with defined levels
+
+```{r}
+#| echo: true
+#| include: true
+treatment <- factor(c("Control", "Drug", "Control", "Drug"))
+treatment
+levels(treatment)
+table(treatment)
+```
+
+## Lists
+
+- Store elements of **different types**
+
+```{r}
+#| echo: true
+#| include: true
+experiment <- list(
+  gene = "TP53",
+  counts = c(120, 135, 98),
+  significant = TRUE
+)
+experiment$gene
+experiment[["counts"]]
+```
+
+## Matrices
+
+- 2D structure, all elements same type
+
+```{r}
+#| echo: true
+#| include: true
+m <- matrix(1:12, nrow = 3, ncol = 4)
+m
+```
+
+## Matrix Indexing
+
+```{r}
+#| echo: true
+#| include: true
+m[1, 2]     # row 1, column 2
+m[2, ]      # entire row 2
+m[, 3]      # entire column 3
+```
+
+## Matrix Operations
+
+```{r}
+#| echo: true
+#| include: true
+m <- matrix(c(10, 20, 30, 40, 50, 60), nrow = 2)
+m
+rowSums(m)
+colMeans(m)
+```
+
+## Data Frames
+
+- Table-like structure: columns can be different types
+- Each column is a vector of equal length
+
+```{r}
+#| echo: true
+#| include: true
+df <- data.frame(
+  gene   = c("BRCA1", "TP53", "MYC"),
+  length = c(81189, 19149, 6183),
+  is_oncogene = c(FALSE, FALSE, TRUE)
+)
+df
+```
+
+## Accessing Data Frame Columns
+
+```{r}
+#| echo: true
+#| include: true
+df$gene
+df[["length"]]
+df[, "is_oncogene"]
+```
+
+## Subsetting Data Frames
+
+```{r}
+#| echo: true
+#| include: true
+# Rows where length > 10000
+df[df$length > 10000, ]
+```
+
+```{r}
+#| echo: true
+#| include: true
+# Using subset()
+subset(df, is_oncogene == TRUE)
+```
+
+## Inspecting Data
+
+```{r}
+#| echo: true
+#| include: true
+str(df)       # structure
+summary(df)   # summary statistics
+```
+
+- Also useful: `head()`, `tail()`, `nrow()`, `ncol()`, `dim()`
+
+## Generating Sequences
+
+```{r}
+#| echo: true
+#| include: true
+1:10                         # integer sequence
+seq(0, 1, by = 0.2)         # custom step
+seq(0, 100, length.out = 5) # fixed number of points
+rep(c(1, 2), times = 3)     # repeat pattern
+```
+
+## Basic Plotting
+
+```{r}
+#| echo: true
+#| include: true
+x <- 1:30
+y <- x^2
+plot(x, y, type = "b", col = "blue",
+     main = "x vs x²", xlab = "x", ylab = "x²")
+```
+
+## Getting Help
+
+- `?mean` — help page for a function
+- `??anova` — search across all packages
+- `example(plot)` — run built-in examples
+- `str(object)` — inspect any object's structure
+
+## Packages
+
+::: {style="font-size: 0.85em"}
+
+**Install:**
+```{r}
+#| echo: true
+#| eval: false
+install.packages("ggplot2")          # from CRAN
+BiocManager::install("GenomicRanges") # from Bioconductor
+```
+
+**Load:**
+```{r}
+#| echo: true
+#| eval: false
+library(ggplot2)
+```
+
+**Check library paths:**
+```{r}
+#| echo: true
+#| include: true
+.libPaths()
+```
+:::
+
+## Summary
+
+| Concept | Key functions |
+|---------|--------------|
+| Variables | `<-`, `print()` |
+| Vectors | `c()`, `length()`, `sum()`, `mean()` |
+| Factors | `factor()`, `levels()`, `table()` |
+| Matrices | `matrix()`, `rowSums()`, `colMeans()` |
+| Data frames | `data.frame()`, `$`, `subset()` |
+| Sequences | `:`, `seq()`, `rep()` |
+| Plotting | `plot()` |
+| Help | `?`, `??`, `str()` |
