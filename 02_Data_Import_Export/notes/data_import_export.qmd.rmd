@@ -1,0 +1,310 @@
+---
+title: "Data Import & Export"
+format:
+  revealjs:
+    self-contained: true
+    code-block-height: 450px
+editor: visual
+---
+
+## The `read.table` Family
+
+| Function | Separator | Header |
+|----------|-----------|--------|
+| `read.table()` | white space | `FALSE` |
+| `read.csv()` | `,` (comma) | `TRUE` |
+| `read.delim()` | `\t` (tab) | `TRUE` |
+
+- All are wrappers around `read.table()` with different defaults
+- Key arguments: `sep`, `header`, `stringsAsFactors`, `na.strings`
+
+## Tab-Delimited Files (TSV)
+
+Raw file `DNase.tsv`:
+```
+"Run"	"conc"	"density"
+"1"	0.04882812	0.017
+"1"	0.04882812	0.018
+"1"	0.1953125	0.121
+"1"	0.1953125	0.124
+```
+
+- Fields separated by **tab** characters
+- Header row present
+- Values optionally quoted
+
+## Reading TSV Files
+
+```{r}
+#| echo: true
+#| include: true
+dnase <- read.delim("../data/DNase.tsv", header = TRUE)
+head(dnase, 4)
+```
+
+## What Happens with Wrong Settings?
+
+Using `read.csv()` on a tab-delimited file:
+```{r}
+#| echo: true
+#| include: true
+wrong <- read.csv("../data/DNase.tsv", header = TRUE)
+head(wrong, 3)
+```
+
+The entire row becomes a single column — the comma separator doesn't match tabs.
+
+## Comma-Separated Files (CSV)
+
+Raw file `ChickWeight.csv`:
+```
+"weight","Time","Chick","Diet"
+42,0,"1","1"
+51,2,"1","1"
+59,4,"1","1"
+```
+
+- Fields separated by **commas**
+- Quoted strings, numeric values unquoted
+
+## Reading CSV Files
+
+```{r}
+#| echo: true
+#| include: true
+chick <- read.csv("../data/ChickWeight.csv")
+head(chick, 4)
+str(chick)
+```
+
+## Space-Delimited Files
+
+Raw file `ChickWeight_feed.txt`:
+```
+weight feed
+179 horsebean
+160 horsebean
+136 horsebean
+227 horsebean
+```
+
+- Fields separated by **spaces**
+- Simple header, no quoting
+
+## Reading Space-Delimited Files
+
+```{r}
+#| echo: true
+#| include: true
+feed <- read.table("../data/ChickWeight_feed.txt",
+                    header = TRUE,
+                    stringsAsFactors = TRUE)
+head(feed, 4)
+str(feed)
+```
+
+`read.table()` handles space-delimited files by default.
+
+## Reading Excel Files
+
+```{r}
+#| echo: true
+#| include: true
+library(readxl)
+feed_xl <- read_excel("../data/ChickWeight_feed.xlsx",
+                       sheet = 1)
+head(feed_xl, 4)
+```
+
+- `read_excel()` returns a **tibble** (enhanced data frame)
+- Specify sheet by number or name
+
+## BED Files — No Header
+
+Raw file `genes.bed`:
+```
+chr1	35302	47518	.	19	+
+chr1	48727	51793	.	19	-
+chr1	53339	73160	.	18	-
+```
+
+- Tab-delimited, **no header row**
+- Standard genomic format: chrom, start, end, name, score, strand
+
+## Reading Files Without Headers
+
+```{r}
+#| echo: true
+#| include: true
+genes <- read.table("../data/genes.bed", header = FALSE)
+head(genes, 3)
+```
+
+Column names default to `V1`, `V2`, ... — assign meaningful names:
+
+```{r}
+#| echo: true
+#| include: true
+colnames(genes) <- c("chrom", "start", "end",
+                      "name", "score", "strand")
+head(genes, 3)
+```
+
+## Alternative: Set Names During Import
+
+```{r}
+#| echo: true
+#| include: true
+genes <- read.table(
+  "../data/genes.bed", header = FALSE,
+  col.names = c("chrom", "start", "end",
+                 "name", "score", "strand")
+)
+head(genes, 3)
+```
+
+## Inspecting Imported Data
+
+::: {style="font-size: 0.85em"}
+
+| Function | Purpose |
+|----------|---------|
+| `head(df)` | First 6 rows |
+| `tail(df)` | Last 6 rows |
+| `str(df)` | Structure (types, dimensions) |
+| `summary(df)` | Statistical summary per column |
+| `dim(df)` | Number of rows and columns |
+| `nrow(df)`, `ncol(df)` | Row / column count |
+| `colnames(df)` | Column names |
+
+:::
+
+## Data Frames vs Tibbles
+
+```{r}
+#| echo: true
+#| include: true
+library(tibble)
+chick_tb <- as_tibble(chick)
+chick_tb
+```
+
+Tibbles print more compactly and show column types.
+
+## Quick Exploratory Plots
+
+```{r}
+#| echo: true
+#| include: true
+plot(dnase$conc, dnase$density,
+     xlab = "Concentration", ylab = "Optical Density",
+     main = "DNase ELISA Assay", col = "blue", pch = 16)
+```
+
+## Boxplots for Grouped Data
+
+```{r}
+#| echo: true
+#| include: true
+boxplot(weight ~ feed, data = feed,
+        main = "Chick Weight by Feed Type",
+        xlab = "Feed", ylab = "Weight",
+        col = "lightblue", las = 2, cex.axis = 0.8)
+```
+
+## Histograms
+
+```{r}
+#| echo: true
+#| include: true
+genes$length <- genes$end - genes$start
+hist(genes$length, breaks = 100, col = "orange",
+     main = "Gene Length Distribution",
+     xlab = "Gene Length (bp)", xlim = c(0, 20000))
+```
+
+## Handling Missing Values
+
+::: {style="font-size: 0.85em"}
+
+Raw file with `NA` values:
+```
+Run	conc	density
+1	0.04882812	0.017
+1	0.04882812	0.018
+1	0.1953125	NA
+```
+
+Missing values can also appear as empty fields or custom strings.
+
+:::
+
+```{r}
+#| echo: true
+#| include: true
+d <- read.delim("../data/DNase_missing_values_2.tsv")
+mean(d$density)             # NA propagates!
+mean(d$density, na.rm = TRUE)  # exclude NAs
+```
+
+## Removing Rows with NA
+
+```{r}
+#| echo: true
+#| include: true
+d <- read.delim("../data/DNase_missing_values_2.tsv")
+nrow(d)
+d_clean <- na.omit(d)
+nrow(d_clean)
+```
+
+- `na.rm = TRUE` — ignore NAs in calculations
+- `na.omit()` — remove entire rows containing any NA
+- `na.strings` argument in `read.table()` — define custom NA representations
+
+## Exporting Data
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+# CSV (comma-separated)
+write.csv(feed, "output.csv", row.names = FALSE)
+
+# TSV (tab-separated)
+write.table(feed, "output.tsv", sep = "\t",
+            row.names = FALSE)
+```
+
+- `row.names = FALSE` — don't write row numbers to file
+- Check output in a text editor to verify format
+
+## Saving R Objects
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+# Save any R object in binary format
+saveRDS(d_clean, "work_dir/clean_data.rds")
+
+# Load it back
+loaded <- readRDS("work_dir/clean_data.rds")
+```
+
+- Preserves exact R object (types, factors, attributes)
+- More compact than text formats
+- Not human-readable
+
+## Summary
+
+| Task | Function |
+|------|----------|
+| Read CSV | `read.csv()` |
+| Read TSV | `read.delim()` |
+| Read any delimited | `read.table(sep=, header=)` |
+| Read Excel | `readxl::read_excel()` |
+| Inspect | `head()`, `str()`, `summary()` |
+| Handle NAs | `na.rm=TRUE`, `na.omit()` |
+| Write CSV/TSV | `write.csv()`, `write.table()` |
+| Save/load R objects | `saveRDS()`, `readRDS()` |
