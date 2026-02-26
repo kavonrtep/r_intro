@@ -1,5 +1,5 @@
 ---
-title: "R introduction"
+title: "Control Structures, Apply & Functions"
 format:
   revealjs:
     self-contained: true
@@ -18,9 +18,7 @@ editor: visual
 
 - `break`: break the execution of a loop
 
-- `next`: skip an interation of a loop
-
-
+- `next`: skip an iteration of a loop
 
 
 ## Control Structures: if-else
@@ -30,10 +28,8 @@ editor: visual
 #| include: true
 #| eval: false
 if (<condition>) {
-  <statements>
   # do something
 } else {
-  <statements>
   # do something else
 }
 ```
@@ -42,13 +38,36 @@ Example:
 ```{r}
 #| echo: true
 #| include: true
-x <- 10
-if (x > 5) {
-  print("x is greater than 5")
+number <- 15
+if (number < 0) {
+  print("The number is negative.")
 } else {
-  print("x is less than or equal to 5")
+  print("The number is 0 or positive.")
 }
 ```
+
+## Comparison and Logical Operators
+
+Comparison operators: `<`, `>`, `<=`, `>=`, `==`, `!=`
+
+```{r}
+#| echo: true
+#| include: true
+10 < 20
+10 == 10
+10 != 10
+```
+
+Logical operators: AND (`&`), OR (`|`), NOT (`!`)
+
+```{r}
+#| echo: true
+#| include: true
+TRUE & FALSE
+TRUE | FALSE
+!TRUE
+```
+
 ## Control Structures: for loop
 For loops are used to iterate over a sequence of values.
 ```{R}
@@ -67,25 +86,21 @@ for (i in 1:5) {
   print(i)
 }
 ```
+
 ## Control Structures: for loop
-For loops can be used to iterate over a vector.
+Using `seq_along()` to iterate over vector indices:
 
 ```{r}
 #| echo: true
 #| include: true
-x <- seq(0, 1, by = 0.3)
-for (i in x) {
-  print(i)
+num_vector <- c(2, 4, 6, 8, 10)
+squares <- numeric(length(num_vector))
+for (i in seq_along(num_vector)) {
+  squares[i] <- num_vector[i]^2
 }
+print(squares)
 ```
-Alternativelly we can iterate over indices.
-```{r}
-#| echo: true
-#| include: true
-for (i in seq_along(x)) {
-  cat(i, x[i], "\n")
-}
-```
+
 ## Nested loops
 ```{r}
 #| echo: true
@@ -94,10 +109,11 @@ mat <- matrix(1:6, nrow = 3)
 print(mat)
 for (i in seq_len(nrow(mat))) {
   for (j in seq_len(ncol(mat))) {
-    print(mat[i, j])
+    cat("Element [", i, ",", j, "] =", mat[i, j], "\n")
   }
 }
 ```
+
 ## Other types of loops
 - `while` loops: execute a loop while a condition is true
 - `repeat` loops: execute an infinite loop
@@ -114,63 +130,133 @@ while (<condition>) {
 
 repeat {
   <statements>
-  if (<condition>) {
-    break
-  }
+  if (<condition>) break
 }
 ```
+
 ## Vectorized operations
 - R is optimized for vectorized operations
-- The most efficient way to perform operations in R is to avoid loops
+- Avoid loops when a vectorized solution exists
+
 ```{r}
 #| echo: true
 #| include: true
-x <- 1:5
-y <- 6:10
-z <- x + y
-print(z)
+v <- c(1, 2, 3, 4, 5)
+v_squared <- v^2
+cat("Vectorized squares:", v_squared, "\n")
 ```
+
+Loop equivalent (less efficient):
+
 ```{r}
 #| echo: true
 #| include: true
-z <- numeric(length(x))
-for (i in seq_along(x)) {
-    z[i] <- x[i] + y[i]
+v_squared_loop <- numeric(length(v))
+for (i in seq_along(v)) {
+  v_squared_loop[i] <- v[i]^2
 }
-print(z)
+cat("Loop computed squares:", v_squared_loop, "\n")
 ```
-## Apply family of functions
-- `apply()`, `lapply()`, `sapply()`, `tapply()`, `mapply()`
-- These functions are used to apply a function to a vector or list
-- They are more efficient than loops
+
+## Exercise: CpG Island Detection
+
+CpG dinucleotides are depleted in most of the genome (methylation → deamination)
+but **CpG islands** near gene promoters are protected.
+
+**Task:** Scan a 10,000 bp DNA sequence with a sliding window, count CpG
+dinucleotides, and plot the result.
+
+## Exercise: Tools you will need
+
+```{r}
+#| echo: true
+#| include: true
+library(stringi)
+dna_sequence <- readRDS("../data/dna_sequence.rds")
+```
+
+Extract a window with `substr()`:
+```{r}
+#| echo: true
+#| include: true
+substr(dna_sequence, 1, 20)
+```
+
+Count "CG" in a string with `stri_count_fixed()`:
+```{r}
+#| echo: true
+#| include: true
+stri_count_fixed("AACGTTCGCG", "CG")
+```
+
+## Exercise: Your task
+
+Everything is set up for you — write the **for loop**:
+
 ```{r}
 #| echo: true
 #| include: true
 #| eval: false
-lapply(<list>, <function>)
-```
-- *function* is a function that takes a single argument and returns a single value.
-- *function* can be a built-in function or a custom function.
-- *function* is 'applied' to each element of the list.
+window_size <- 100
+n_windows <- nchar(dna_sequence) - window_size + 1
+cpg_counts <- numeric(n_windows)
 
-
-## Example: `lapply()`
-
-```{r}
-#| echo: true
-#| include: true
-example_list <- list(a = 1:3, b = 4:6, c = 7:9)
-m <- lapply(example_list, mean)
-print(m)
-```
-```{r}
-#| echo: true
-#| include: true
-m <- numeric(length(example_list))
-for (i in seq_along(example_list)) {
-    m[i] <- mean(example_list[[i]])
+for (i in 1:n_windows) {
+  window <- substr(dna_sequence, ?, ?)
+  cpg_counts[i] <- stri_count_fixed(?, ?)
 }
-print(m)
+
+plot(cpg_counts, type = "l",
+     xlab = "Position (bp)",
+     ylab = "CpG count (per 100 bp)",
+     main = "CpG Island Detection",
+     col = "darkblue")
+abline(h = mean(cpg_counts), col = "red", lty = 2)
+```
+
+## Apply family of functions
+
+- `apply()`, `lapply()`, `sapply()`, `tapply()`, `mapply()`
+- Apply a function to elements of a vector, list, or matrix
+- More concise and often faster than explicit loops
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+apply(<matrix>, <MARGIN>, <function>)  # rows (1) or columns (2)
+lapply(<list>, <function>)             # returns list
+sapply(<list>, <function>)             # returns vector/matrix
+tapply(<vector>, <groups>, <function>) # by group
+mapply(<function>, <arg1>, <arg2>)     # multiple arguments
+```
+
+## `apply`
+
+- Apply a function to the rows or columns of a matrix
+- `MARGIN = 1` for rows, `MARGIN = 2` for columns
+
+```{r}
+#| echo: true
+#| include: true
+set.seed(123)
+mat <- matrix(rnorm(20), nrow = 5, ncol = 4)
+row_means <- apply(mat, 1, mean)
+cat("Row means:", row_means, "\n")
+col_means <- apply(mat, 2, mean)
+cat("Col means:", col_means, "\n")
+```
+
+## `lapply`
+
+- `lapply` returns a **list** with the result of applying a function to each element
+
+```{r}
+#| echo: true
+#| include: true
+num_list <- list(a = 1:5, b = seq(2, 10, by = 2), c = rnorm(4))
+list_means <- lapply(num_list, mean)
+print(list_means)
 ```
 
 ## `sapply`
@@ -178,24 +264,33 @@ print(m)
 ```{r}
 #| echo: true
 #| include: true
-m <- sapply(example_list, mean)
+m <- sapply(num_list, mean)
 print(m)
-r <- sapply(example_list, range)
+r <- sapply(num_list, range)
 print(r)
 ```
-## `apply`
-- `apply` is used to apply a function to the rows or columns of a matrix
 
+## `tapply`
+- `tapply` applies a function to subsets of a vector defined by a grouping factor
+
+`sample_data` data frame:
+```{r}
+#| echo: false
+#| include: true
+library(knitr)
+sample_data <- read.csv("../data/sample_data.csv")
+kable(head(sample_data))
+```
+
+## `tapply`
+Calculate the mean of `Height` for each `Treatment` group:
 ```{r}
 #| echo: true
 #| include: true
-mat <- matrix(1:6, nrow = 3)
-print(mat)
-row_sums <- apply(mat, 1, sum)
-print(row_sums)
-col_sums <- apply(mat, 2, sum)
-print(col_sums)
+tapply(sample_data$Height, sample_data$Treatment, mean)
 ```
+For each level of `Treatment`, `tapply` calculates the mean of `Height`.
+
 ## `mapply`
 - `mapply` is a multivariate version of `sapply`
 - It applies a function to the first elements of each argument, the second elements, and so on.
@@ -203,77 +298,142 @@ print(col_sums)
 ```{r}
 #| echo: true
 #| include: true
-x <- 1:3
-y <- 4:6
-m <- mapply(rep, x, y)
-print(m)
+power_func <- function(x, y) x^y
+bases <- c(2, 3, 4, 5)
+exponents <- c(3, 2, 2, 1)
+mapply(power_func, bases, exponents)
 ```
-## `tapply`
-- `tapply` is used to apply a function to subsets of a vector
 
-`x` data frame:
-```{r}
-#| echo: false
-#| include: true
-library(knitr)
-x <- read.csv("../data/sample_data.csv")
-kable(head(x))
+## Apply on expression data
 
-```
-## `tapply`
-calulate the mean of Leaf_Count in each Treatment group
+Using `apply` on real expression data:
+
 ```{r}
 #| echo: true
 #| include: true
-tapply(x$Leaf_Count, x$Treatment, mean)
+#| fig-height: 3.5
+feature_counts <- read.delim("../data/feature_counts.csv")
+gene_totals <- apply(feature_counts, 1, sum)
+hist(log10(gene_totals),
+     main = "Total Expression per Gene",
+     xlab = "log10(Total Expression)")
 ```
-For each level of `Treatment`, `tapply` calculates the mean of `Leaf_Count`.
 
 ## Functions
+
 - Functions are blocks of code that perform a specific task
 - Functions take arguments and return a value
 - Functions can be built-in, part of a package, or user-defined
 
-User-defined function:
 ```{r}
 #| echo: true
 #| include: true
 #| eval: false
 my_function <- function(x) {
-   <do some stuff with x>
-   return(some value)
+   # do some stuff with x
+   return(some_value)
 }
 ```
-## Functions
-Single argument function:
+
+## Functions - Example
+
 ```{r}
 #| echo: true
 #| include: true
-get_odd_numbers <- function(x) {
-  odd_numbers <- x[x %% 2 == 1]
-  return(odd_numbers)
+my_mean <- function(x, na.rm = TRUE) {
+  if (!is.numeric(x)) {
+    stop("Input must be numeric.")
+  }
+  result <- mean(x, na.rm = na.rm)
+  return(result)
 }
-odd_numbers <- get_odd_numbers(1:10)
-print(odd_numbers)
+
+test_vector <- c(2, 4, NA, 8, 10)
+my_mean(test_vector)
 ```
-Multiple argument function:
+
+## Functions - Default Arguments
+
+Functions can have default arguments:
+
 ```{r}
 #| echo: true
 #| include: true
-add_numbers <- function(x, y) {
-  return(x + y)
+normalize_vector <- function(x, na.rm = TRUE) {
+  if (na.rm) x <- na.omit(x)
+  x_min <- min(x)
+  x_max <- max(x)
+  return((x - x_min) / (x_max - x_min))
 }
+normalize_vector(c(5, 10, 15, 20, 25))
 ```
-## Functions
-Functions can have default arguments
+
+## Functions with apply
+
+Combining custom functions with `apply`:
+
 ```{r}
 #| echo: true
 #| include: true
-increment_value <- function(x, inc = 1) {
-  return(x + inc)
+normalize_expression <- function(expr_data) {
+  normalized <- t(apply(expr_data, 1, normalize_vector))
+  return(normalized)
 }
-incremented_value <- increment_value(5)
-print(incremented_value)
-incremented_value <- increment_value(5, 2)
-print(incremented_value)
+normalized_counts <- normalize_expression(feature_counts)
+head(normalized_counts[, 1:4])
+```
+
+## Functions with apply
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 4
+heatmap(as.matrix(feature_counts[1:100, 1:10]))
+```
+
+## Differential Expression
+
+```{r}
+#| echo: true
+#| include: true
+feature_annotation <- read.delim(
+  "../data/feature_annotation.csv", sep = "\t")
+
+test_de <- function(expr_data, groups) {
+  expr_data <- as.matrix(expr_data)
+  means <- apply(expr_data, 1,
+                 function(x) tapply(x, groups, mean))
+  pval <- apply(expr_data, 1,
+                function(x) t.test(x ~ groups)$p.value)
+  data.frame(t(means), p_value = pval)
+}
+
+DE_results <- test_de(feature_counts,
+                      feature_annotation$gender)
+```
+
+## Differential Expression - Results
+
+```{r}
+#| echo: true
+#| include: true
+library(knitr)
+kable(head(DE_results))
+```
+
+## Volcano Plot
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 4
+plot(
+  log2(DE_results$male / DE_results$female),
+  -log10(DE_results$p_value),
+  xlab = "log2(fold change)",
+  ylab = "-log10(p-value)",
+  main = "Volcano Plot",
+  col = "#00000060"
+)
 ```
