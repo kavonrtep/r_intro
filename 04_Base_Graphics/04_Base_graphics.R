@@ -1,19 +1,34 @@
-#!/usr/bin/env Rscript
-# =====================================================
-# Introduction to Base Graphics in R - Practice Script
-# =====================================================
-# This script demonstrates key examples from the presentation.
-# Follow the commented instructions to explore and experiment
-# with R’s base graphics functions.
+################################################################################
+# R SCRIPT FOR SESSION 4: INTRODUCTION TO BASE GRAPHICS IN R
+#
+# This script covers:
+# 1. Core plot types: scatter, line, histogram, boxplot, barplot, stripchart
+# 2. Customizing plots: colors, shapes, sizes, axis limits, log scale
+# 3. Layering: points(), lines(), legend(), annotations
+# 4. Multi-plot layouts: par(mfrow), layout()
+# 5. Exporting plots: png(), pdf()
+#
+# DATA SOURCES USED:
+# - ToothGrowth: built-in dataset (guinea pig tooth growth experiment)
+# - mtcars: built-in dataset (car performance data)
+# - data/genes.bed: BED file with gene annotations
+# - data/chip_seq.bedgraph: ChIP-seq bedgraph data
+#
+# INSTRUCTIONS:
+# Run the script section by section, following along with the slides.
+# Each "SLIDE:" comment marks where to switch to the next slide.
+################################################################################
 
-# -------------------------------------
-# Example 1: Scatter Plot
-# -------------------------------------
+# ---------- SLIDE: Base Graphics ----------
+
+####################### 1. SCATTER AND LINE PLOTS ##############################
+
+# ---------- SLIDE: Scatter Plot ----------
+
 set.seed(123)
 x <- rnorm(50) + 1:50
 y <- rnorm(50) + 1:50
 
-# Create a basic scatter plot.
 plot(x, y,
      main = "Scatter Plot",
      xlab = "X-axis",
@@ -27,16 +42,13 @@ plot(x, y,
 # - Changing the color (try "red", "green", etc.)
 # Use the plot() function parameters or add new points with points().
 
+# ---------- SLIDE: Line Plot ----------
 
-# -------------------------------------
-# Example 2: Line Plot
-# -------------------------------------
 x_line <- 0:10
 y_line <- x_line^2
 
-# Create a simple line plot.
 plot(x_line, y_line,
-     type = "l",   # line type
+     type = "l",
      main = "Line Plot",
      xlab = "X-axis",
      ylab = "Y-axis",
@@ -44,32 +56,31 @@ plot(x_line, y_line,
 
 # TASK 2:
 # Create a new line plot using a different line type.
-# For example, try using a dashed line (lty = 2) and add points with a different color.
+# Try a dashed line (lty = 2) and add points with a different color.
 # Hint: use the points() function after plot().
 
-# -------------------------------------
-# Example 3: Exploring Plot Options
-# -------------------------------------
-# Demonstrate different plot types by setting up a 2x2 canvas.
+# ---------- SLIDE: Plot types: `type` argument ----------
+
+par(mfrow = c(2, 2))
 plot(x_line, y_line, type = "l", main = "type = 'l'")
 plot(x_line, y_line, type = "p", main = "type = 'p'")
 plot(x_line, y_line, type = "b", main = "type = 'b'")
-plot(x_line, type = "h", main = "type = 'h'")
+plot(x_line,         type = "h", main = "type = 'h'")
+par(mfrow = c(1, 1))
 
 # TASK 3:
 # Experiment with additional type options.
-# For example, try using "s" (stair steps) or "o" (overplotted points and lines) in a new plot.
+# Try "s" (stair steps) or "o" (overplotted points and lines).
 
+####################### 2. WORKING WITH DATASETS ##############################
 
-# -------------------------------------
-# Example 4: Adding More Data with ToothGrowth Dataset
-# -------------------------------------
-# Load the ToothGrowth dataset.
+# ---------- SLIDE: Adding data: ToothGrowth dataset ----------
+
 data(ToothGrowth)
-# Display the first few rows.
-print(head(ToothGrowth))
+head(ToothGrowth)
 
-# Create a simple plot: Dose vs. Tooth length.
+# ---------- SLIDE: Adding data: simple plot ----------
+
 plot(ToothGrowth$dose, ToothGrowth$len,
      main = "Tooth Growth",
      xlab = "Dose (mg/day)",
@@ -79,356 +90,319 @@ plot(ToothGrowth$dose, ToothGrowth$len,
 
 # TASK 4:
 # Create a boxplot of tooth length grouped by supplement type.
-# Hint: Use the boxplot() function with the formula: len ~ supp
+# Hint: Use boxplot() with the formula: len ~ supp
 
-# -------------------------------------
-# Example 5: Plotting by Supplement Type
-# -------------------------------------
-# Separate data by supplement type.
+# ---------- SLIDE: Adding data: plotting by group ----------
+
 tg_vc <- ToothGrowth[ToothGrowth$supp == "VC", ]
 tg_oj <- ToothGrowth[ToothGrowth$supp == "OJ", ]
 
-# Plot data for VC.
 plot(tg_vc$dose, tg_vc$len,
      main = "Tooth Growth by Supplement Type",
      xlab = "Dose (mg/day)",
      ylab = "Tooth length",
      pch = 19,
      col = "blue")
-# Add points for OJ.
-points(tg_oj$dose, tg_oj$len,
-       pch = 19,
-       col = "red")
-# Add a legend.
-legend("bottomright", legend = c("VC", "OJ"), col = c("blue", "red"), pch = 19)
+points(tg_oj$dose, tg_oj$len, pch = 19, col = "red")
+legend("bottomright", legend = c("VC", "OJ"),
+       col = c("blue", "red"), pch = 19)
 
 # TASK 5:
-# Modify the above plot by adding a regression line (or a smoothing line)
-# for one of the supplement types.
-# Hint: use lm() to fit a simple model and abline() to add the line.
+# Add a regression line for one of the supplement types.
+# Hint: use lm() to fit a model and abline() to draw the line.
 
-# -------------------------------------
-# Example 6: Using plot(), points(), and lines() Functions
-# -------------------------------------
-# Create a new plot with multiple graphical elements.
+# ---------- SLIDE: `plot`, `points`, and `lines` ----------
+
 par(mfrow = c(1, 3))
 xx <- 1:10
 yy <- c(1, 3, 2, 5, 4, 7, 6, 9, 8, 10)
 
-# Single plot using plot().
-plot(xx, yy, type = "b", main = "Single Plot")
+plot(xx, yy, type = "b", main = "single plot")
 
-# Plot with additional points.
-plot(xx, yy, type = "b", main = "Plot + Points")
-points(xx, yy/2, type = "p", col = "red")
+plot(xx, yy, type = "b", main = "plot + points")
+points(xx, yy / 2, type = "p", col = "red")
 
-# Plot with additional points and lines.
-plot(xx, yy, type = "b", main = "Plot + Points + Lines")
-points(xx, yy/2, type = "l", col = "red")
-lines(xx, yy*2, col = "blue")
-# Reset layout.
+plot(xx, yy, type = "b", main = "plot + points + lines")
+points(xx, yy / 2, type = "l", col = "red")
+lines(xx, yy * 2, col = "blue")
+
 par(mfrow = c(1, 1))
 
 # TASK 6:
-# On the third plot, try adding:
+# On the third plot, add:
 # - New points with different shapes/colors.
-# - Annotations using the text() function to label some points.
+# - Annotations using text() to label some points.
 # - A custom title using title() or mtext().
-# Experiment with layering different elements.
 
+####################### 3. CATEGORICAL DATA ###################################
 
+# ---------- SLIDE: Plotting categorical data: `boxplot` ----------
 
+# len ~ supp is a formula: plot len on y-axis grouped by supp
+boxplot(len ~ supp, data = ToothGrowth,
+        main = "Tooth Growth by Supplement Type",
+        xlab = "Supplement Type",
+        ylab = "Tooth length")
+
+# ---------- SLIDE: `boxplot` input formats ----------
+
+# boxplot also accepts a list
+example_list <- list(
+  a = rnorm(100),
+  b = rnorm(100, 3, 0.5),
+  c = rnorm(100, -2, 5)
+)
+boxplot(example_list)
+
+# ---------- SLIDE: Categorical data: `stripchart` ----------
+
+stripchart(len ~ supp, data = ToothGrowth,
+           main = "Tooth Growth by Supplement Type",
+           xlab = "Supplement Type",
+           ylab = "Tooth length",
+           col = "blue",
+           vertical = TRUE)
+
+# ---------- SLIDE: `stripchart` with jitter ----------
+
+stripchart(len ~ supp, data = ToothGrowth,
+           main = "Tooth Growth by Supplement Type",
+           xlab = "Supplement Type",
+           ylab = "Tooth length",
+           col = "blue",
+           method = "jitter",
+           vertical = TRUE)
+
+# ---------- SLIDE: Bar plot vs. Box plot ----------
+
+par(mfrow = c(1, 2))
+boxplot(mpg ~ cyl, data = mtcars,
+        main = "Boxplot of MPG by Cylinders",
+        xlab = "Number of Cylinders",
+        ylab = "Miles per Gallon",
+        col = "lightblue")
+barplot(table(mtcars$cyl),
+        main = "Bar Chart of Cylinders",
+        xlab = "Number of Cylinders",
+        ylab = "Frequency",
+        col = "lightgreen")
+par(mfrow = c(1, 1))
+
+# ---------- SLIDE: Bar plot example ----------
+
+par(mfrow = c(1, 2))
+barplot(table(mtcars$gear),
+        main = "Bar Chart of Gears",
+        xlab = "Number of Gears",
+        ylab = "Frequency",
+        col = "lightgreen")
+
+counts <- table(mtcars$am, mtcars$gear)
+barplot(counts,
+        main = "Gears by Transmission",
+        xlab = "Number of Gears",
+        ylab = "Frequency",
+        col = c("lightblue", "lightgreen"))
+par(mfrow = c(1, 1))
+
+####################### 4. HISTOGRAMS ##########################################
+
+# ---------- SLIDE: Histogram ----------
+
+x2 <- rnbinom(100, mu = 10, size = 10)
+hist(x2, main = "Histogram of Negative Binomial Distribution")
+
+# ---------- SLIDE: Histogram: controlling breaks ----------
+
+par(mfrow = c(1, 2))
+hist(x2, main = "breaks = 20", breaks = 20)
+hist(x2, main = "breaks = 0:40", breaks = 0:40)
+par(mfrow = c(1, 1))
+
+# TASK 7:
+# Experiment with breaks:
+# - Use a custom vector from seq(), e.g.:
+#     breaks_vec <- seq(min(x2), max(x2), length.out = 12)
+# - Try freq = FALSE to show density instead of counts.
+# - Overlay two histograms using add = TRUE.
+
+####################### 5. CUSTOMIZING PLOTS ##################################
+
+# ---------- SLIDE: Customizing plots: colors, shapes, size ----------
+
+par(mfrow = c(2, 3))
+plot(x, y, main = "default plot")
+plot(x, y, col = "#FF0000",   main = "col sets point color")
+plot(1:20, col = rainbow(20), main = "col as a color vector")
+plot(1:20, pch = 1:20,        main = "pch sets point shape")
+plot(x, y, cex = 3,           main = "cex sets point size")
+plot(x, y, main = "lines and grid")
+abline(0, 2)
+grid()
+par(mfrow = c(1, 1))
+
+# ---------- SLIDE: Customizing plots: axis limits and log scale ----------
+
+par(mfrow = c(2, 2))
+plot(x, y, xlim = c(0, 30), ylim = c(0, 20), type = "b",
+     main = "setting axis limits")
+plot(x, y, log = "y", type = "b", main = "log scale on y-axis")
+plot(x, y, log = "x", type = "b", main = "log scale on x-axis")
+plot(x, y, log = "xy", type = "b", main = "log scale on both axes")
+par(mfrow = c(1, 1))
+
+# ---------- SLIDE: Adding legends and annotations ----------
+
+plot(x, y, pch = 19, col = "blue")
+points(x + 0.5, y + 0.5, col = "red", pch = 17)
+legend("topleft",
+       legend = c("Group 1", "Group 2"),
+       col = c("blue", "red"),
+       pch = c(19, 17))
+mtext(expression(alpha + beta == gamma), side = 3, cex = 2)
+
+####################### 6. MULTI-PLOT LAYOUTS #################################
+
+# ---------- SLIDE: Combining plots: `par(mfrow)` ----------
+
+par(mfrow = c(2, 3))
+plot(x, y, main = "plot 1", col = "1")
+plot(x, y, main = "plot 2", col = "2")
+plot(x, y, main = "plot 3", col = "3")
+plot(x, y, main = "plot 4", col = "4")
+plot(x, y, main = "plot 5", col = "5")
+plot(x, y, main = "plot 6", col = "6")
+par(mfrow = c(1, 1))
+
+# ---------- SLIDE: Combining plots: `layout` ----------
+
+layout(matrix(c(1, 2, 4, 3), nrow = 2),
+       width = c(2, 1), height = c(1, 2))
+layout.show(4)
+
+# ---------- SLIDE: Combining plots: `layout` example ----------
+
+layout(matrix(c(1, 2, 4, 3), nrow = 2),
+       width = c(2, 1), height = c(1, 2))
+hist(x2, main = "1st plot")
+plot(x, y, main = "2nd plot")
+hist(rnorm(100), main = "3rd plot")
+
+####################### 7. EXPORTING PLOTS ####################################
+
+# ---------- SLIDE: Exporting plots: bitmap formats ----------
+
+# Create output directory if needed
+dir.create("outputs", showWarnings = FALSE)
+
+png("outputs/plot1.png", width = 800, height = 600)
+plot(x, y, main = "Scatter Plot", col = "blue")
+dev.off()
+
+# ---------- SLIDE: Exporting plots: vector formats ----------
+
+# pdf saves each plot() call as a separate page
+pdf("outputs/plot2.pdf", width = 8, height = 6)
+plot(x, y, main = "Scatter Plot", col = "blue")   # page 1
+hist(x2, main = "Histogram")                       # page 2
+plot(x, y, main = "Line Plot", col = "red")        # page 3
+dev.off()
+
+####################### 8. REAL-DATA EXERCISES ################################
+
+# ---------- SLIDE: `par` function ----------
+
+# par() sets graphical parameters that apply to subsequent plots.
+# Examples:
+#   par(mfrow = c(2, 2))           multi-plot layout
+#   par(mar = c(5, 4, 4, 2) + 0.1) plot margins
+#   par(cex = 1.5)                  text/symbol magnification
+#   par(lty = 2)                    dashed lines
+# See ?par for the full list.
+
+# ---------- SLIDE: Summary ----------
 
 ################################################################################
-# R SCRIPT: Analysis and Plotting of ChIP-seq Bedgraph Data for chr1
+# EXERCISE: ChIP-seq Bedgraph Data
 #
-# INSTRUCTIONS FOR STUDENTS:
-#
-# Your task is to create a script that:
-#   1. Loads a bedgraph file (without a header) into a data frame.
-#      This bedgraph file contains ChIP-seq data with columns:
-#      "chr_name", "start", "end", "score".
-#      Score is a numeric value and represent enrichment obtained from ChIP-seq experiment.
-#   2. Assigns the correct column names.
-#   3. Subsets the data for rows corresponding to chromosome "chr1".
-#   4. Creates a color vector where most points are "black" but changes to "red"
-#      for rows with a score above a specified threshold (e.g., score > 5).
-#   5. Plots the data with base R graphics using a scatter/histogram-like plot.
-#   6. Adds a legend to explain the color coding.
+# Your task: create a script that
+#   1. Loads "data/chip_seq.bedgraph" (tab-delimited, no header) with columns:
+#      chr_name, start, end, score
+#   2. Subsets rows for chromosome "chr1".
+#   3. Creates a color vector: "black" for score <= 5, "red" for score > 5.
+#   4. Plots start vs. score using type = "h".
+#   5. Adds a legend.
 #
 # HINTS:
-#
-# 1. Loading the Data:
-#    - Use the read.table() function.
-#    - Since the file is tab-delimited and has no header, set header = FALSE
-#      and sep = "\t".
-#    - Example: my_data <- read.table("your_file.bedgraph", header = FALSE, sep = "\t")
-#
-# 2. Defining Column Names:
-#    - Use the colnames() function to set names to: "chr_name", "start", "end", "score".
-#    - Example: colnames(my_data) <- c("chr_name", "start", "end", "score")
-#
-# 3. Subsetting the Data:
-#    - Extract only the rows where the chromosome name equals "chr1".
-#    - You can use subset() or indexing (e.g., my_data[my_data$chr_name == "chr1", ])
-#
-# 4. Creating a Color Vector:
-#    - Create a vector of colors (same length as the number of rows in your subset).
-#    - Use rep() to fill the vector with "black" initially.
-#    - Then, update the vector so that for any row where score > 5, the color becomes "red".
-#    - Hint: Use conditional indexing, e.g., colors[subset_data$score > 5] <- "red"
-#
-# 5. Plotting the Data:
-#    - Use the plot() function to create a scatter plot.
-#    - Set the x-axis to the 'start' column and y-axis to the 'score' column.
-#    - Use type = "h" for a plot with vertical lines (histogram-like look).
-#    - Add labels using xlab, ylab, and main. You can include newline characters (e.g., "\n")
-#      in the main title if needed.
-#
-# 6. Adding a Legend:
-#    - Use the legend() function.
-#    - Place it in the "topright" of the plot.
-#    - The legend should describe the two categories:
-#         "Score <= 5" (black) and "Score > 5" (red).
-#
-# 7. Experiment:
-#    - After you complete the above, try modifying the threshold (e.g., change 5 to another value)
-#      or adjust the plot parameters to better visualize your data.
-#
-# NOTES:
-#   - Ensure your bedgraph file (e.g., "chip_seq.bedgraph") is saved in your working directory.
-#   - Check your data by using functions such as head(), tail(), and str() before plotting.
-#
-# Write your code below by following these steps interactively.
+#   my_data <- read.table("data/chip_seq.bedgraph", header = FALSE, sep = "\t")
+#   colnames(my_data) <- c("chr_name", "start", "end", "score")
+#   chr1 <- my_data[my_data$chr_name == "chr1", ]
+#   colors <- ifelse(chr1$score > 5, "red", "black")
 ################################################################################
 
-# Step 1: Load the bedgraph data into a data frame.
-# Hint: Use read.table() with header = FALSE and sep = "\t".
-# path to the bedgraph file is "data/chip_seq.bedgraph"
+# Step 1: Load the bedgraph data
+# (your code here)
 
+# Step 2: Assign column names
+# (your code here)
 
-# Step 2: Define the column names.
-# Hint: Use colnames() to assign names: "chr_name", "start", "end", "score".
+# Step 3: Inspect the data (head, str)
+# (your code here)
 
+# Step 4: Subset to chr1
+# (your code here)
 
-# Step 3: Inspect your data to ensure it's loaded correctly.
-# Hint: Use head(), tail(), and str() to check the data structure.
+# Step 5: Plot start vs. score
+# (your code here)
 
-# Step 4: Subset the data to include only rows for chromosome "chr1".
-# Hint: Use subset() or indexing [ ] to filter the data.
+# Step 6: Color by score threshold and re-plot
+# (your code here)
 
+# Step 7: How many chromosomes are in the dataset? Use table() to find out.
 
-# Step 5: Plot the data.
-# Hint: Use plot() to create a scatter plot of 'start' vs. 'score'.
-#       - test different values for pch, col, and type ('l', 'p', 'h' parameters.
-#       - Label your axes with xlab and ylab.
-
-
-# Step 6: Create a color vector based on the 'score' values.
-# Hint: use ifelse() function to assign colors based on a condition.
-#       - For example, colors <- ifelse(subset_data$score > 5, "red", "black")
-#       - Use the colors vector in the plot() function to color the points.
-
-# Once you have written your code, run it interactively to see your plot and make adjustments.
-
-
-
-# =====================================================
-# Introduction to Histograms in R - Practice Script
-# =====================================================
-# This script demonstrates key examples for working with histograms.
-# Follow the commented instructions to explore and experiment with
-# the hist() function and its parameters in base R.
-
-# -------------------------------------
-# Example 1: Simple Histogram
-# -------------------------------------
-# Using the built-in mtcars dataset, create a simple histogram of the 'mpg' variable.
-hist(mtcars$mpg,
-     main = "Histogram of Miles Per Gallon",
-     xlab = "Miles Per Gallon",
-     col = "lightblue")
-
-# TASK 1:
-# Modify the above histogram by:
-# - Changing the title and axis labels.
-# - Changing the color of the bars (try "pink", "yellow", etc.).
-# - Adding additional parameters such as 'xlim' to adjust the x-axis limits.
-# Experiment with these options and observe how the histogram appearance changes.
-
-
-# -------------------------------------
-# Example 2: Adjusting Histogram Breaks
-# -------------------------------------
-# Create a histogram of the 'mpg' variable with a specific number of breaks.
-hist(mtcars$mpg,
-     breaks = 40,  # Try modifying this value (e.g., 5 or 15) to see the effect on binning.
-     main = "Histogram of MPG with 10 Breaks",
-     xlab = "Miles Per Gallon",
-     col = "lightgreen")
-
-# TASK 2:
-# Modify the above histogram to use a custom vector of breakpoints instead of a single number.
-# Hints:
-#   - Create a break vector using seq(), for example:
-#         breaks_vec <- seq(min(mtcars$mpg), max(mtcars$mpg), length.out = 12)
-#   - Pass this vector to the breaks argument.
-# Experiment with different numbers of breakpoints and compare the resulting histograms.
-
-
-# -------------------------------------
-# Example 3: Overlaying Histograms for Two Datasets
-# -------------------------------------
-# Generate two sample datasets.
-set.seed(123)
-data1 <- rnorm(100, mean = 0, sd = 1)
-data2 <- rnorm(100, mean = 1, sd = 1)
-
-# Define common breaks for both histograms. Brakes must include the range of both datasets.
-common_breaks <- seq(min(c(data1, data2)),
-                     max(c(data1, data2)),
-                     length.out = 15)
-
-# Create the histogram for data1.
-# We set 'xlim' and 'ylim' so that both histograms can be properly overlaid.
-h1 <- hist(data1,
-           breaks = common_breaks,
-           main = "Overlayed Histograms",
-           xlab = "Value",
-           col = "#FFAAAAAA",  # semi-transparent
-           border = "white",
-           xlim = range(common_breaks),
-)
-
-# Overlay the histogram for data2.
-hist(data2,
-     breaks = common_breaks,
-     col = "#AAFFAAAA",  # semi-transparent
-     border = "white",
-     add = TRUE)
-
-# Add a legend to differentiate the two datasets.
-legend("topright", legend = c("Data 1", "Data 2"),
-       fill = c(rgb(0, 0, 1, 0.5), rgb(1, 0, 0, 0.5)))
-
-# TASK 3:
-# Modify the overlayed histograms by:
-# - Adjusting the transparency of the colors.
-# - Changing the common break values (try a different number of breakpoints).
-# - Experiment by altering the mean or standard deviation of data1 or data2, then overlay histograms.
-# - Explore other parameters such as 'freq' (for frequency) vs. 'prob' (for density) by setting freq = FALSE.
-# Run your modified code and observe how the histogram visualizations change.
-
-
+# Create multipanel plots for first 4 chromosomes (chr1 - chr4) using par(mfrow).
+# use a loop to subset each chromosome and plot start vs. score with type = "h".
+# (your code here)
 
 ################################################################################
-# Histogram of Gene Locations - Practice Script
-################################################################################
-# This script guides you through:
-#   1. Importing and preparing gene annotation data from a BED file.
-#   2. Exploring the data by inspecting the number of genes per chromosome.
-#   3. Creating a histogram of gene start positions for a single chromosome.
-#   4. Creating a multiplot layout of histograms for chromosomes chr1 through chr6.
+# EXERCISE: Gene Location Histograms (BED file)
 #
-# STUDENT TASKS:
-#   - Follow the instructions provided in the comments.
-#   - Modify histogram parameters (breaks, colors, axis limits) to explore their effects.
-#   - Experiment with different layout options using par(mfrow).
-#
-# NOTES:
-#   - Make sure the "genes.bed" file is in the "data" folder within your working directory.
-#   - This exercise assumes familiarity with data import, subsetting, and base R plotting.
+# Your task:
+#   1. Load "data/genes.bed" (tab-delimited, no header, 6 columns:
+#      chrom, start, end, name, score, strand).
+#   2. Explore the number of genes per chromosome (table()).
+#   3. Create a histogram of gene start positions for "chr12".
+#   4. Create a 2x3 multiplot of histograms for chr1 through chr6.
 ################################################################################
 
-# -----------------------------------------------------
-# Step 1: Import and Prepare the Data
-# -----------------------------------------------------
-# Import the BED file. BED files are tab-delimited and typically have no header.
-# use read.table function, data are located in "data/genes.bed", there is no header in the file
-genes <- read.table("data/genes.bed", header = FALSE)
+# Step 1: Load genes.bed
+genes <- read.table("data/genes.bed", header = FALSE,
+                    col.names = c("chrom", "start", "end",
+                                  "name", "score", "strand"))
 
-# Inspect the first few rows to understand the structure.
-
-# By default, the column names are V1, V2, ..., V6.
-# Assign meaningful column names based on the standard BED format.
-colnames(genes) <- c("chrom", "start", "end", "name", "score", "strand")
-head(genes)
-
-# Alternatively, you could define the header while reading the file:
-# genes <- read.table("data/genes.bed", header = FALSE,
-#                     col.names = c("chrom", "start", "end", "name", "score", "strand"))
-
-# -----------------------------------------------------
-# Step 2: Explore the Data
-# -----------------------------------------------------
-# Check the number of genes in the file.
-n_genes <- nrow(genes)
-print(n_genes)
-
-# Determine the number of genes per chromosome.
+# Step 2: Explore - number of genes per chromosome
 n_genes_chr <- table(genes$chrom)
 print(n_genes_chr)
+barplot(n_genes_chr,
+        main = "Number of Genes per Chromosome",
+        xlab = "Chromosome", ylab = "Number of Genes")
 
-# Create a simple plot to visualize the number of genes per chromosome.
-plot(n_genes_chr,
-     main = "Number of Genes per Chromosome",
-     xlab = "Chromosome",
-     ylab = "Number of Genes")
-# try to use barplot instead of plot
-
-# Calculate gene lengths and add them as a new column.
+# Calculate gene lengths
 genes$length <- genes$end - genes$start
+# TASK: Create a histogram of gene lengths
 
-# TASK: Create histogram of gene lengths
-
-
-
-# -----------------------------------------------------
-# Step 3: Histogram for a Single Chromosome
-# -----------------------------------------------------
-# TASK: Create a histogram of gene start positions for a single chromosome.
-# Hints:
-#   - Use subsetting to extract genes from a specific chromosome (e.g., "chr12").
-#   - Use the hist() function to plot the distribution of the 'start' positions.
-#   - Customize the histogram by adjusting the number of breaks, colors, and labels.
-#
-# Example Code:
+# Step 3: Histogram for chr12
 chr12_genes <- genes[genes$chrom == "chr12", ]
+# TASK: use hist() to plot the distribution of start positions
+# Experiment with breaks = 100 or 300, colors, xlim.
 
-# TASK: use hist function to plot the distribution of the 'start' positions
-
-
-# TASK:
-# - Experiment by changing the number of breaks (try 100 or 300).
-# - Modify the color and add xlim or ylim parameters to better visualize the data.
-# - Consider adding additional labels or gridlines using abline() or grid().
-
-# -----------------------------------------------------
-# Step 4: Multiplot of Histograms for Chromosomes chr1 - chr6
-# -----------------------------------------------------
-# TASK: Create a multiplot layout to display histograms of gene start positions for chromosomes chr1 to chr6.
-#
-# Hints:
-#   - Use par(mfrow = c(2, 3)) to set up a layout with 2 rows and 3 columns.
-#   - Loop through a vector of chromosome names (e.g., paste0("chr", 1:6)).
-#   - Define a common breaks vector for all histograms to ensure consistency.
-#
-# Example Code:
-# Set up a multiplot layout.
+# Step 4: Multiplot for chr1 - chr6
 par(mfrow = c(2, 3))
-# Define the chromosomes to plot.
-chromosomes <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6")
-
-# Define common breaks based on the overall range of gene start positions.
+chromosomes <- paste0("chr", 1:6)
 common_breaks <- seq(min(genes$start), max(genes$start), length.out = 50)
 
-# Loop through each chromosome and create its histogram.
-# Use a for loop to iterate over the chromosome names.
-# select subset of genes for each chromosome using subset function or indexing
-# use hist function to plot the distribution of the 'start' positions
-
-# TASK:
-# - Modify the layout dimensions (e.g., try par(mfrow = c(3, 2))).
-# - Change the color or transparency in the histograms.
-# - Experiment with different numbers of common breaks to see how they affect each histogram.
-# - Optionally, add legends or annotations to your multiplot.
+for (chr in chromosomes) {
+  chr_genes <- genes[genes$chrom == chr, ]
+  # TASK: add hist() call here using chr_genes$start and common_breaks
+}
+par(mfrow = c(1, 1))
