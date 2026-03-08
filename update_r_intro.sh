@@ -2,12 +2,19 @@
 # Update local repo and sync working copy to ~/r_intro
 # Usage: run from the cloned repository directory
 #   ./update_r_intro.sh          - pull and copy, skip existing student files
-#   ./update_r_intro.sh --force  - pull and overwrite everything
+#   ./update_r_intro.sh --force  - discard any local repo changes, pull, and overwrite everything
 
 set -e
 
 DEST="$HOME/r_intro"
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+
+if [ "$1" = "--force" ]; then
+    # Discard any local modifications in the repo before pulling
+    echo "Resetting repo to remote state..."
+    git -C "$SCRIPT_DIR" reset --hard
+    git -C "$SCRIPT_DIR" clean -fd
+fi
 
 # Pull latest changes
 echo "Pulling latest changes..."
