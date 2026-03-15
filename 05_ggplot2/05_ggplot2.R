@@ -168,6 +168,12 @@ ggplot(mpg, aes(x = cty, y = hwy, color = class)) +
   xlab("City MPG") +
   ylab("Highway MPG")
 
+# TASK 6:
+# The facet_grid plot above uses fixed (shared) scales across all panels.
+# Add scales = "free" inside facet_grid() — what changes?
+# Also try scales = "free_x" and scales = "free_y" separately.
+# When would free scales be misleading? When are they useful?
+
 
 ################################################################################
 # SECTION 6: COORDINATES AND THEMES
@@ -181,6 +187,13 @@ ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
   theme_minimal() +
   ggtitle("Box Plot: MPG by Cylinder Count (Flipped)")
 
+# TASK 7:
+# Zoom into the boxplot above using coord_cartesian(ylim = c(15, 25)).
+# Then try the same zoom with scale_y_continuous(limits = c(15, 25)).
+# Compare the two results — how does the boxplot shape differ?
+# Hint: scale_*() removes data outside the limits before computing stats;
+#       coord_cartesian() only clips the viewport, keeping all data.
+
 # ---------- SLIDE: Customizing with theme() ----------
 
 ggplot(mpg, aes(x = cty, y = hwy, color = class)) +
@@ -193,7 +206,7 @@ ggplot(mpg, aes(x = cty, y = hwy, color = class)) +
   ) +
   ggtitle("Scatter Plot with Custom Theme")
 
-# TASK 6:
+# TASK 8:
 # Modify one of the above plots to:
 #   - Switch to theme_dark().
 #   - Adjust title and axis label font size using:
@@ -218,6 +231,13 @@ ggplot(data.frame(x = names(x), y = x), aes(x, y)) +
   geom_bar(stat = "identity", fill = "steelblue") +
   xlab("Brand") + ylab("Count")
 
+# TASK 9:
+# Map 'drv' (drive train: f/r/4) to the fill aesthetic in a bar plot of 'class':
+#   ggplot(mpg, aes(x = class, fill = drv)) + geom_bar()
+# Then switch to position = "fill" to show proportions instead of counts.
+# Bonus: reorder the x-axis bars by total count:
+#   aes(x = reorder(class, class, length), fill = drv)
+
 # ---------- SLIDE: Line plot ----------
 
 df_line <- data.frame(x = 1:10, y = (1:10)^2)
@@ -227,9 +247,18 @@ ggplot(df_line, aes(x = x, y = y)) +
   xlab("X") +
   ylab("Y")
 
-# TASK: Add points to the line plot above using geom_point().
+# TASK 10:
+# Add geom_point() to the line plot above to mark each data point on the line.
 
 # ---------- SLIDE: Line plot — multiple lines ----------
+
+# Dataset: Orange
+# Built-in R data frame — 35 rows, 3 columns.
+# Records of orange tree growth:
+#   Tree          — ordered factor, tree ID (ordered by increasing max diameter)
+#   age           — numeric, days since 1968-12-31
+#   circumference — numeric, trunk circumference at breast height (mm)
+# 5 trees measured at 7 time points each.
 
 ggplot(Orange, aes(x = age, y = circumference, color = Tree)) +
   geom_line() +
@@ -243,6 +272,12 @@ ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
   ggtitle("Box Plot: MPG by Cylinder Count") +
   xlab("Cylinders") +
   ylab("MPG")
+
+# TASK 11:
+# Replace geom_boxplot() with geom_violin(fill = "lightblue") on the same data.
+# Then add a layer of raw points on top:
+#   geom_jitter(width = 0.1, alpha = 0.4)
+# What does the violin shape show that the boxplot does not?
 
 # ---------- SLIDE: Histogram ----------
 
@@ -259,7 +294,8 @@ ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
   ggtitle("Sepal Length by Species") +
   xlab("Sepal Length") + ylab("Count")
 
-# TASK: Try different position settings: "stack", "dodge", "fill".
+# TASK 12:
+# Try different position settings in the histogram above: "stack", "dodge", "fill".
 # Also try facet_wrap(~ Species) instead of using position.
 
 # ---------- SLIDE: Histogram — faceted ----------
@@ -277,7 +313,13 @@ ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
   xlab("Sepal Length") +
   ylab("Density")
 
-# TASK 7:
+# TASK 13:
+# In the density plot above, swap fill = Species for color = Species.
+# How does the appearance change (filled area vs. outline only)?
+# Now add fill = "grey80" as a fixed aesthetic inside geom_density() —
+# what does it do when combined with the color mapping?
+
+# TASK 14:
 # Choose one plot type from this section (bar, line, box, histogram, density).
 # Customize it: change colors, labels, alpha, add a theme, or use a different dataset.
 
@@ -306,7 +348,7 @@ grid.arrange(p_density, p_line, p_box,
              layout_matrix = rbind(c(1, 1), c(2, 3)),
              heights = c(2, 1))
 
-# TASK 8:
+# TASK 15:
 # Experiment with different layouts:
 #   - Change nrow or ncol in grid.arrange().
 #   - Try a different layout_matrix.
@@ -327,7 +369,7 @@ combined_plot <- grid.arrange(p_density, p_line, p_box,
 ggsave("combined_plot.png", combined_plot, width = 10, height = 8, dpi = 300)
 ggsave("combined_plot.pdf", combined_plot, width = 10, height = 8)
 
-# TASK 9:
+# TASK 16:
 # Export one of your individual plots to a PDF file.
 # Try different formats (jpg, tiff) and adjust width/height.
 

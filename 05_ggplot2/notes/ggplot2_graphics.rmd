@@ -281,6 +281,8 @@ ggplot(mpg, aes(x = cty, y = hwy, color = class)) +
   ylab("Highway MPG")
 ```
 
+> 📝 **Task 6** — add `scales = "free"` inside `facet_grid()`. Also try `"free_x"` and `"free_y"`. When would free scales be misleading vs. useful?
+
 ## Coordinates
 
 `coord_flip()` swaps x and y axes:
@@ -294,6 +296,8 @@ ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
   theme_minimal() +
   ggtitle("Box Plot: MPG by Cylinder Count (Flipped)")
 ```
+
+> 📝 **Task 7** — zoom using `coord_cartesian(ylim = c(15, 25))`. Then try the same with `scale_y_continuous(limits = c(15, 25))`. How does the boxplot shape differ between the two?
 
 ## Built-in themes
 
@@ -324,7 +328,7 @@ ggplot(mpg, aes(x = cty, y = hwy, color = class)) +
   ggtitle("Scatter Plot with Custom Theme")
 ```
 
-> 📝 **Task 6** — switch to `theme_dark()`, adjust font size with `text = element_text(size = 14)`
+> 📝 **Task 8** — switch to `theme_dark()`, adjust font size with `text = element_text(size = 14)`
 
 ## Bar plot
 
@@ -353,6 +357,8 @@ ggplot(data.frame(x = names(x), y = x), aes(x, y)) +
   xlab("Brand") + ylab("Count")
 ```
 
+> 📝 **Task 9** — map `drv` to `fill` in a bar plot of `class`. Then try `position = "fill"` to show proportions. Bonus: reorder bars by count with `reorder(class, class, length)`.
+
 ## Line plot
 
 ```{r}
@@ -365,7 +371,19 @@ ggplot(df_line, aes(x = x, y = y)) +
   xlab("X") + ylab("Y")
 ```
 
-> 📝 **Task** — add points to this line plot with `geom_point()`
+> 📝 **Task 10** — add `geom_point()` to mark each data point on the line
+
+## The `Orange` dataset
+
+Built-in R dataset — 35 rows, 3 columns. Growth of **5 orange trees** over time.
+
+| Column | Type | Description |
+|---|---|---|
+| `Tree` | ordered factor | Tree ID (ordered by increasing max diameter) |
+| `age` | numeric | Days since 1968-12-31 |
+| `circumference` | numeric | Trunk circumference at breast height (mm) |
+
+5 trees × 7 time points. Similar structure to `ChickWeight` — repeated measurements per subject.
 
 ## Line plot: multiple lines
 
@@ -399,6 +417,8 @@ ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
   xlab("Cylinders") +
   ylab("MPG")
 ```
+
+> 📝 **Task 11** — replace `geom_boxplot()` with `geom_violin(fill = "lightblue")`, then add `geom_jitter(width = 0.1, alpha = 0.4)` on top. What does the violin shape reveal that the boxplot doesn't?
 
 ## Histogram
 
@@ -436,7 +456,7 @@ ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
   xlab("Sepal Length") + ylab("Count")
 ```
 
-> 📝 **Task** — try `position = "dodge"`, `"stack"`, `"fill"` and `facet_wrap(~ Species)`
+> 📝 **Task 12** — try `position = "dodge"`, `"stack"`, `"fill"` and `facet_wrap(~ Species)`
 
 ## Histogram: faceted by species
 
@@ -460,7 +480,9 @@ ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
   xlab("Sepal Length") + ylab("Density")
 ```
 
-> 📝 **Task 7** — customize one plot type: colors, labels, alpha, theme, or new dataset
+> 📝 **Task 13** — swap `fill = Species` for `color = Species`. How does the appearance change? Then add `fill = "grey80"` as a fixed aesthetic inside `geom_density()` — what does it do?
+
+> 📝 **Task 14** — customize one plot type: colors, labels, alpha, theme, or new dataset
 
 ## `gridExtra::grid.arrange()`
 
@@ -503,7 +525,7 @@ grid.arrange(p_density, p_line, p_box,
              heights = c(2, 1))
 ```
 
-> 📝 **Task 8** — try different `nrow`/`ncol`, custom `layout_matrix`, add your own plots
+> 📝 **Task 15** — try different `nrow`/`ncol`, custom `layout_matrix`, add your own plots
 
 ## `ggsave()`
 
@@ -526,7 +548,7 @@ ggsave("plot.pdf", plot = my_plot, width = 10, height = 8)
 | `dpi` | resolution — raster formats only |
 | `device` | `"png"`, `"pdf"`, `"jpeg"`, `"tiff"`, `"svg"` |
 
-> 📝 **Task 9** — export one of your plots; try different formats and dimensions
+> 📝 **Task 16** — export one of your plots; try different formats and dimensions
 
 ## Final Exercise: Gene Density along Chromosomes
 
