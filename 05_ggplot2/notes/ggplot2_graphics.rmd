@@ -3,6 +3,7 @@ title: "Introduction to ggplot2 Graphics in R"
 format:
   revealjs:
     self-contained: true
+    slide-number: true
 editor: visual
 ---
 <style>
@@ -10,6 +11,7 @@ editor: visual
   font-size: 160%;
 }
 </style>
+
 ```{r}
 #| echo: false
 #| include: false
@@ -17,316 +19,588 @@ library(ggplot2)
 library(gridExtra)
 library(knitr)
 ```
+
 ## ggplot2
-- **Data** - Default dataset to use for plot
-- **Mapping** - Aesthetic mappings describe how variables in the data are mapped to visual properties
-- **Layers** - Geometric objects (points, lines, bars) that represent data in plots
-- **Facets** - Conditional plots for subsets of data
-- **Themes** - Control the appearance of all non-data components of the plot
-- **Scales** - Maps data values to visual values
+
+- **Data** — default dataset to use for the plot
+- **Mapping** — how variables are assigned to visual properties (`aes()`)
+- **Layers** — geometric objects (points, lines, bars) that represent data
+- **Scales** — maps data values to visual values (colors, axes)
+- **Facets** — conditional plots for subsets of data
+- **Themes** — appearance of all non-data elements
 
 ## Data
-Data
-As the foundation of every graphic, ggplot2 uses data to construct a plot. The system works best if the data is provided in a tidy format, which briefly means a **rectangular data frame** structure where rows are observations and columns are variables.
 
-As the first step in many plots, you would pass the data to the ggplot() function, which stores the data to be used later by other parts of the plotting system. For example, if we intend to make a graphic about the mpg dataset, we would start as follows:
+Every `ggplot2` plot starts with `ggplot()`. The first argument is the dataset.
+ggplot2 works best with **tidy data** — rectangular data frames where rows are observations and columns are variables.
 
-`ggplot(data = mpg)`
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+ggplot(data = mpg)
+```
 
 ## Mapping
-The mapping of a plot is a set of instructions on how parts of the data are mapped onto aesthetic attributes of geometric objects.
 
-A mapping can be made by using the `aes()` function to make pairs of graphical attributes and parts of the data.
+Mappings connect dataset columns to visual properties using `aes()`.
 
-If we want the `cty` and `hwy` columns to map to the `x-` and `y-`coordinates in the plot, we can do that as follows:
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+ggplot(mpg, aes(x = cty, y = hwy))
+```
 
-`ggplot(mpg, mapping = aes(x = cty, y = hwy))`
+## Common aesthetics
 
-## common aesthetics:
+- `x`, `y` — axis position
+- `color` — outline or point color
+- `fill` — fill color (bars, polygons)
+- `shape` — point shape
+- `size` — point or line size
+- `alpha` — transparency (0 = invisible, 1 = opaque)
 
-- x: x-axis
-- y: y-axis
-- color: color of the points
-- fill: fill color of the points
-- shape: shape of the points
-- size: size of the points
-- alpha: transparency of the points
+## Layers: geoms
 
+Layers convert mapped data into visual elements. The most important component of a layer is the **geom** — the geometric object drawn.
 
-## Layers: Core of Data Graphics
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+geom_point()      # scatter plot
+geom_line()       # line plot
+geom_bar()        # bar chart
+geom_histogram()  # histogram
+geom_boxplot()    # box plot
+geom_density()    # density curve
+geom_smooth()     # trend line
+```
 
-**Layers**  convert mapped data into human-readable visuals. Each layer has three components:
+## The `mpg` dataset
 
-- **Geometry**  (`geom_*()`): Defines visual shapes (points, lines, rectangles).
-- **Statistical Transformation**  (`stat_*()`): Computes or transforms data for visualization.
-- **Position Adjustment** : Specifies exact placement of visual elements.
+Fuel economy data from 1999 to 2008 for 38 popular models of cars (EPA data, 234 rows × 11 variables):
 
-*Example:* Two layers displaying `cty` and `hwy` from the `mpg` dataset:
+| Variable | Description |
+|---|---|
+| `manufacturer`, `model` | car identity |
+| `displ` | engine displacement (litres) |
+| `year`, `cyl` | year of manufacture, number of cylinders |
+| `trans` | transmission type |
+| `drv` | drive train: `f` front, `r` rear, `4` 4WD |
+| `cty`, `hwy` | city / highway miles per gallon |
+| `fl` | fuel type |
+| `class` | type of car |
 
-- Points (`geom_point`)
-- Trend line (`geom_smooth`)
-
-## Example: Scatter Plot with Trend Line
+## Example: Scatter Plot
 
 ```{r}
 #| echo: true
 #| include: true
 ggplot(mpg, aes(x = cty, y = hwy)) +
-  # to create a scatterplot
   geom_point() +
-  # to fit and overlay a loess trendline
-  geom_smooth(formula = y ~ x, method = "lm")
+  ggtitle("Scatter Plot: City vs Highway MPG") +
+  xlab("City MPG") +
+  ylab("Highway MPG")
 ```
-## Scales: Connecting Data and Visuals
 
-**Scales**  translate visual aesthetics back into data values, guiding interpretation through axes or legends. They handle:
+> 📝 **Task 1** — change point color and size inside `geom_point()`
 
-- **Plot limits**
-- **Axis breaks**
-- **Label formatting**
-- **Data transformations**
+## Mapping color to a variable
 
-Use `scale_{aesthetic}_{type}()` functions to define scales.
+Map a dataset column to the `color` aesthetic inside `aes()`:
 
-## Example:  Mapping the `class` column to a viridis color palette:
+```{r}
+#| echo: true
+#| include: true
+ggplot(mpg, aes(x = cty, y = hwy, color = class)) +
+  geom_point() +
+  ggtitle("Scatter Plot: Color by Car Class") +
+  xlab("City MPG") +
+  ylab("Highway MPG")
+```
+
+> 📝 **Task 2** — add `size = displ` mapping, change color scale with `scale_color_brewer()`
+
+## Fixed vs. mapped aesthetics
+
+- **Inside `aes()`**: maps a data column → value depends on the data
+- **Outside `aes()`**: fixed value → applies to all points equally
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+# mapped — color varies by class
+ggplot(mpg, aes(x = cty, y = hwy, color = class)) + geom_point()
+
+# fixed — all points are darkgreen
+ggplot(mpg, aes(x = cty, y = hwy)) + geom_point(color = "darkgreen")
+```
+
+## Adding multiple layers
+
+Layers are added with `+`. Each layer shares the base `aes()` mapping unless overridden.
+
+```{r}
+#| echo: true
+#| include: true
+ggplot(mpg, aes(x = cty, y = hwy)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", se = TRUE, formula = y ~ x) +
+  ggtitle("Scatter Plot with Linear Trend Line") +
+  xlab("City MPG") +
+  ylab("Highway MPG")
+```
+
+> 📝 **Task 3** — change `method = "lm"` to `"loess"`, try `se = FALSE`
+
+## `geom_smooth` methods
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+# Linear model (straight line)
+geom_smooth(method = "lm",    formula = y ~ x)
+
+# LOESS: locally estimated scatterplot smoothing (flexible curve)
+geom_smooth(method = "loess", formula = y ~ x)
+
+# Remove confidence interval ribbon
+geom_smooth(method = "lm", se = FALSE, formula = y ~ x)
+```
+
+## Scales
+
+Scales control how data values are translated into visual properties — axis limits, breaks, labels, color palettes.
+
+Use `scale_{aesthetic}_{type}()` functions:
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+scale_color_viridis_d()                               # viridis palette, discrete
+scale_color_brewer(palette = "Set1")                  # ColorBrewer, discrete
+scale_x_log10()                                       # log10 on x-axis
+scale_x_continuous(limits = c(10, 30), breaks = seq(10, 30, 5))
+scale_y_continuous(limits = c(20, 45))
+```
+
+## Example: Viridis color scale
 
 ```{r}
 #| echo: true
 #| include: true
 g1 <- ggplot(mpg, aes(cty, hwy, colour = class)) +
-  geom_point() + ggtitle('default color scale')
+  geom_point() + ggtitle("Default color scale")
 
 g2 <- ggplot(mpg, aes(cty, hwy, colour = class)) +
   geom_point() +
-  scale_colour_viridis_d() + ggtitle('viridis color scale')
+  scale_colour_viridis_d() + ggtitle("Viridis color scale")
 
 grid.arrange(g1, g2, ncol = 2)
 ```
-## Example: Mapping the `cty` column to a log scale:
+
+## Example: Log-scaled axis
+
 ```{r}
 #| echo: true
 #| include: true
 g1 <- ggplot(mpg, aes(x = cty, y = hwy)) +
-  geom_point()
+  geom_point() + ggtitle("Linear scale")
+
 g2 <- ggplot(mpg, aes(x = cty, y = hwy)) +
-    geom_point() +
-    scale_x_log10() + ggtitle('x log scale')
+  geom_point() +
+  scale_x_log10() + ggtitle("Log10 x-axis")
+
 grid.arrange(g1, g2, ncol = 2)
 ```
-## Facets: Visualizing Subsets
 
-**Facets**  split data into smaller panels ("small multiples") based on one or more variables. This helps quickly reveal patterns or trends within subsets.
-Define facets using a formula with functions like `facet_grid()` or `facet_wrap()`.
-**Example:** using iris dataset to create a scatter plot for each species
+> 📝 **Task 4** — set custom axis limits with `scale_x_continuous()` / `scale_y_continuous()`
 
+## Faceting: small multiples
+
+Facets split data into panels based on one or more variables.
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+facet_wrap(~ variable)             # wrap panels into rows/columns
+facet_wrap(~ variable, ncol = 1)   # force single column
+facet_grid(row_var ~ col_var)      # strict row × column grid
+```
+
+## The iris dataset
+
+:::: {.columns}
+::: {.column width="45%"}
+![](iris_flower.jpg)
+:::
+::: {.column width="55%"}
+Measurements in centimeters of sepal length and width and petal length and width for 50 flowers from each of 3 species:
+
+- *Iris setosa*
+- *Iris versicolor*
+- *Iris virginica*
+
+This famous Fisher/Anderson dataset is built into R — `data(iris)`.
+:::
+::::
+
+## `facet_wrap` example
 
 ```{r}
 #| echo: true
 #| include: true
 ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
   geom_point(size = 3) +
-  facet_grid(~Species)
+  facet_wrap(~ Species) +
+  ggtitle("Faceted Scatter Plot: Iris Data") +
+  xlab("Sepal Length") +
+  ylab("Sepal Width")
 ```
 
+> 📝 **Task 5** — try `ncol = 1` and `nrow = 1` in `facet_wrap()`
 
-## Example: facet_grid() with mpg dataset
-- `year` year of manufacture
-- `drv` the type of drive train, where f = front-wheel drive, r = rear wheel drive, 4 = 4wd
-- `cty` city miles per gallon
-- `hwy` highway miles per gallon
+## `facet_grid` example
+
+Rows and columns defined by two variables:
 
 ```{r}
 #| echo: true
 #| include: true
-ggplot(mpg, aes(x = cty, y = hwy)) +
+ggplot(mpg, aes(x = cty, y = hwy, color = class)) +
   geom_point() +
-  facet_grid(year ~ drv)
+  facet_grid(drv ~ cyl) +
+  ggtitle("MPG by Drive Type and Cylinder Count") +
+  xlab("City MPG") +
+  ylab("Highway MPG")
 ```
-## Theme: Customizing Plot Appearance
 
-**Themes**  control non-data elements, defining the look and feel of a plot (e.g., legend position, background, axis styles).
+## Coordinates
 
-- Use built-in themes (`theme_*()`) for quick styling.
-- Use `theme()` and `element_*()` for detailed adjustments.
-
-## Theme Example:
+`coord_flip()` swaps x and y axes:
 
 ```{r}
 #| echo: true
 #| include: true
-ggplot(mpg, aes(cty, hwy, colour = class)) +
-  geom_point() +
+ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue") +
+  coord_flip() +
   theme_minimal() +
+  ggtitle("Box Plot: MPG by Cylinder Count (Flipped)")
+```
+
+## Built-in themes
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+theme_gray()     # default — grey background, white gridlines
+theme_minimal()  # minimal chrome, no background
+theme_classic()  # no gridlines, classic look
+theme_dark()     # dark background
+theme_bw()       # black-and-white, suitable for print
+```
+
+## Customizing with `theme()`
+
+```{r}
+#| echo: true
+#| include: true
+ggplot(mpg, aes(x = cty, y = hwy, color = class)) +
+  geom_point() +
+  theme_classic() +
   theme(
     legend.position = "top",
-    axis.line = element_line(size = 0.75),
-    axis.line.x.bottom = element_line(colour = "blue")
-  )
+    axis.line = element_line(size = 0.75, color = "gray"),
+    text = element_text(size = 12)
+  ) +
+  ggtitle("Scatter Plot with Custom Theme")
 ```
-## Other types of plots
-- **Bar plots**: `geom_bar()`
-- **Line plots**: `geom_line()`
-- **Box plots**: `geom_boxplot()`
-- **Histograms**: `geom_histogram()`
-- **Density plots**: `geom_density()`
 
+> 📝 **Task 6** — switch to `theme_dark()`, adjust font size with `text = element_text(size = 14)`
 
+## Bar plot
 
-## Bar Plot Example
+`geom_bar()` counts observations in each group automatically:
+
 ```{r}
 #| echo: true
 #| include: true
 ggplot(mpg, aes(x = class)) +
-  geom_bar()
+  geom_bar(fill = "steelblue") +
+  ggtitle("Bar Plot: Count of Car Classes") +
+  xlab("Car Class") +
+  ylab("Count")
 ```
-In this example, we are creating a bar plot of the `class` column from the `mpg` dataset. `geom_bar() is counting the number of observations in each class and plotting the result.
 
-## Bar Plot Example
-What is we already have the counts and want to plot them?
+## Bar plot: pre-computed counts
+
+When you already have counts, use `stat = "identity"`:
+
 ```{r}
 #| echo: true
 #| include: true
-x <- c(Mazda=10, Toyota=20, Honda=30)
+x <- c(Mazda = 10, Toyota = 20, Honda = 30)
 ggplot(data.frame(x = names(x), y = x), aes(x, y)) +
-  geom_bar(stat = "identity")
+  geom_bar(stat = "identity", fill = "steelblue") +
+  xlab("Brand") + ylab("Count")
 ```
-## Line Plot Example
+
+## Line plot
+
 ```{r}
 #| echo: true
 #| include: true
-xy <- data.frame(x = 1:10, y = (1:10)^2)
-ggplot(xy, aes(x, y)) +
-  geom_line()
+df_line <- data.frame(x = 1:10, y = (1:10)^2)
+ggplot(df_line, aes(x = x, y = y)) +
+  geom_line(color = "red", size = 1.2) +
+  ggtitle("Line Plot: y = x²") +
+  xlab("X") + ylab("Y")
 ```
-## Line Plot Example with multiple lines
-Using `Orange` dataset:
+
+> 📝 **Task** — add points to this line plot with `geom_point()`
+
+## Line plot: multiple lines
+
+Using the `Orange` dataset (tree circumference over time):
+
 ```{r}
 #| echo: false
 #| include: true
-
-kable(Orange)
+kable(head(Orange))
 ```
-## Line Plot Example with multiple lines
+
+## Line plot: multiple lines
+
 ```{r}
+#| echo: true
+#| include: true
 ggplot(Orange, aes(x = age, y = circumference, color = Tree)) +
-  geom_line()
+  geom_line() +
+  ggtitle("Orange Tree Growth") +
+  xlab("Age (days)") + ylab("Circumference (mm)")
 ```
-## Box Plot Example
-```{r}
-#| echo: true
-#| include: true
 
-ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
-  geom_boxplot()
+## Box plot
 
-```
-## Box Plot - flipping the axes
 ```{r}
 #| echo: true
 #| include: true
 ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
-  geom_boxplot() +
-  coord_flip()
+  geom_boxplot(fill = "orange") +
+  ggtitle("Box Plot: MPG by Cylinder Count") +
+  xlab("Cylinders") +
+  ylab("MPG")
 ```
 
-## Histogram Example
+## Histogram
+
 ```{r}
 #| echo: true
 #| include: true
 ggplot(iris, aes(x = Sepal.Length)) +
-  geom_histogram(alpha = 0.7, bins = 20)
+  geom_histogram(bins = 20, fill = "purple", alpha = 0.7) +
+  ggtitle("Histogram of Sepal Length") +
+  xlab("Sepal Length") + ylab("Frequency")
 ```
-## Histogram Example
-What if we plot each species separately with different colors?
-```{r}
-#| echo: true
-#| include: true
-ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
-  geom_histogram(alpha = 0.5, bins = 20, position ='identity')
-```
-## Histogram Example
-What if we what each histogram to be stacked on top of each other?
-```{r}
-#| echo: true
-#| include: true
-ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
-  geom_histogram(alpha = 0.5, bins = 20, position = "stack")
-```
-## Histogram Example
-What if we what each histogram to in different panels?
 
-## Histogram Example
-What if we what each histogram to in different panels?
+## Histogram: color by group
+
+`position` controls how bars for different groups are drawn:
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+position = "identity"  # overlap (use alpha < 1)
+position = "stack"     # stack on top of each other
+position = "dodge"     # side by side
+position = "fill"      # stack, normalized to 1
+```
+
+## Histogram: overlapping by species
+
+```{r}
+#| echo: true
+#| include: true
+ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
+  geom_histogram(alpha = 0.5, bins = 20, position = "identity") +
+  ggtitle("Sepal Length by Species") +
+  xlab("Sepal Length") + ylab("Count")
+```
+
+> 📝 **Task** — try `position = "dodge"`, `"stack"`, `"fill"` and `facet_wrap(~ Species)`
+
+## Histogram: faceted by species
+
 ```{r}
 #| echo: true
 #| include: true
 ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
   geom_histogram(alpha = 0.5, bins = 20) +
-  facet_grid(Species~.)
+  facet_grid(Species ~ .) +
+  ggtitle("Sepal Length — Faceted by Species")
 ```
-## Density Plots
+
+## Density plot
+
 ```{r}
 #| echo: true
 #| include: true
 ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
-  geom_density(alpha = 0.5)
+  geom_density(alpha = 0.5) +
+  ggtitle("Density Plot of Sepal Length by Species") +
+  xlab("Sepal Length") + ylab("Density")
 ```
-## Combining plots
+
+> 📝 **Task 7** — customize one plot type: colors, labels, alpha, theme, or new dataset
+
+## `gridExtra::grid.arrange()`
+
+Arrange multiple `ggplot` objects in one figure:
+
 ```{r}
 #| echo: true
 #| include: true
+#| eval: false
 library(gridExtra)
-p1 <- ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
-  geom_density(alpha = 0.5) +
-  facet_grid(Species~.)
-p2 <- ggplot(Orange, aes(x = age, y = circumference, color = Tree)) +
+grid.arrange(p1, p2, p3, ncol = 2)
+grid.arrange(p1, p2, p3, nrow = 1)
+grid.arrange(p1, p2, p3,
+             layout_matrix = rbind(c(1, 1),   # p1 spans top row
+                                   c(2, 3)))  # p2 and p3 on bottom
+```
+
+## `grid.arrange` example
+
+```{r}
+#| echo: true
+#| include: true
+p_density <- ggplot(iris, aes(x = Sepal.Length, fill = Species)) +
+  geom_density(alpha = 0.5) + facet_grid(Species ~ .)
+p_line <- ggplot(Orange, aes(x = age, y = circumference, color = Tree)) +
   geom_line()
-p3 <- ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
+p_box  <- ggplot(mtcars, aes(x = factor(cyl), y = mpg)) +
   geom_boxplot()
 
-grid.arrange(p1, p2, p3, ncol = 2)
+grid.arrange(p_density, p_line, p_box, ncol = 2)
 ```
-## Combining plots
+
+## Custom layout with `layout_matrix`
+
 ```{r}
 #| echo: true
 #| include: true
-
-grid.arrange(p1, p2, p3, nrow = 1)
+grid.arrange(p_density, p_line, p_box,
+             layout_matrix = rbind(c(1, 1), c(2, 3)),
+             heights = c(2, 1))
 ```
-## Combining plots
+
+> 📝 **Task 8** — try different `nrow`/`ncol`, custom `layout_matrix`, add your own plots
+
+## `ggsave()`
+
+`ggsave()` saves the last plot (or a named plot object) to a file:
+
 ```{r}
 #| echo: true
 #| include: true
-grid.arrange(p1, p2, p3, layout_matrix = rbind(c(1, 1), c(2, 3)))
-
+#| eval: false
+ggsave("plot.png", plot = my_plot, width = 10, height = 8, dpi = 300)
+ggsave("plot.pdf", plot = my_plot, width = 10, height = 8)
 ```
-## Combining plots
+
+| Argument | Description |
+|---|---|
+| `filename` | output file path (extension sets format) |
+| `plot` | ggplot object (default: last plot) |
+| `width`, `height` | dimensions |
+| `units` | `"in"` (default), `"cm"`, `"mm"`, `"px"` |
+| `dpi` | resolution — raster formats only |
+| `device` | `"png"`, `"pdf"`, `"jpeg"`, `"tiff"`, `"svg"` |
+
+> 📝 **Task 9** — export one of your plots; try different formats and dimensions
+
+## Final Exercise: Gene Density along Chromosomes
+
+1. Import gene annotation data from a BED file
+2. Filter to chromosomes chr1–chr6
+3. Bar plot of gene counts per chromosome
+4. Histogram / density plot of gene positions — faceted by chromosome
+5. Export to PDF
+
+## Step 1: Import and inspect
+
 ```{r}
 #| echo: true
 #| include: true
-grid.arrange(p1, p2, p3, layout_matrix = rbind(c(1, 1), c(2, 3)), heights = c(2, 1))
+#| eval: false
+genes <- read.table("data/genes.bed", header = FALSE)
+colnames(genes) <- c("chrom", "start", "end", "name", "score", "strand")
+head(genes)
 ```
 
-## Exporting plots
-`ggsave()` function can be used to save the plot to a file. It takes the following arguments:
+## Step 2: Filter chromosomes
 
-- `filename`: name of the file to save the plot
-- `plot`: the plot to save
-- `widht and height`: dimensions of the plot
-- `units`: units of the dimensions (default is inches, possible values are "in", "cm", "mm", "px")
-- `device`: the device to use for saving the plot (default is "png", other possible values are "pdf", "jpeg", "tiff", "bmp")
-- `dpi`: resolution of the plot in dots per inch
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+genes_filtered <- subset(genes,
+  chrom %in% c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6"))
+cat("Number of genes in chr1–chr6:", nrow(genes_filtered), "\n")
+```
 
-```r
-p_final <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(1, 1), c(2, 3)), heights = c(2, 1))
-ggsave("final_plot.png", p_final, width = 10, height = 10, device = "png")
-ggsave("final_plot.pdf", p_final, width = 10, height = 10, device = "pdf")
+## Step 3: Bar plot of gene counts
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+ggplot(genes_filtered, aes(x = chrom, fill = chrom)) +
+  geom_bar() +
+  ggtitle("Number of Genes per Chromosome (chr1–chr6)") +
+  xlab("Chromosome") + ylab("Number of Genes") +
+  theme_minimal()
+```
+
+## Step 4: Faceted gene density
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+ggplot(genes_filtered, aes(x = start)) +
+  geom_histogram(bins = 50, fill = "steelblue", alpha = 0.8) +
+  facet_wrap(~ chrom, scales = "free_x") +
+  ggtitle("Gene Start Position Distribution by Chromosome") +
+  xlab("Genomic position") + ylab("Gene count") +
+  theme_minimal()
+```
+
+## Step 5: Export
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+p_final <- ggplot(genes_filtered, aes(x = start)) +
+  geom_histogram(bins = 50, fill = "steelblue", alpha = 0.8) +
+  facet_wrap(~ chrom, scales = "free_x") +
+  theme_minimal()
+
+ggsave("gene_density.pdf", p_final, width = 12, height = 8)
 ```
 
 ## Resources
-R Graph Gallery: https://www.r-graph-gallery.com/
-R Gallery Book: https://bookdown.org/content/b298e479-b1ab-49fa-b83d-a57c2b034d49/
-R Data Visualization: https://r4ds.had.co.nz/data-visualisation.html
 
-
-
+- R Graph Gallery: <https://www.r-graph-gallery.com/>
+- R Gallery Book: <https://bookdown.org/content/b298e479-b1ab-49fa-b83d-a57c2b034d49/>
+- R for Data Science — Visualisation: <https://r4ds.had.co.nz/data-visualisation.html>
