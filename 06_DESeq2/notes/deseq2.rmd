@@ -3,6 +3,7 @@ title: "Analysis of Differential Gene Expression with DESeq2"
 format:
   revealjs:
     self-contained: true
+    slide-number: true
 editor: visual
 ---
 <style>
@@ -11,6 +12,21 @@ editor: visual
 }
 </style>
 
+```{r}
+#| echo: false
+#| include: false
+library(DESeq2)
+library(ggplot2)
+library(plotly)
+library(matrixStats)
+library(pheatmap)
+library(heatmaply)
+library(htmlwidgets)
+library(org.Dm.eg.db)
+library(AnnotationDbi)
+library(knitr)
+library(kableExtra)
+```
 
 ## Introduction
 This presentation introduces a complete RNA-Seq analysis workflow using the **DESeq2**  package. You will learn how to:
@@ -24,47 +40,57 @@ This presentation introduces a complete RNA-Seq analysis workflow using the **DE
 The pasilla dataset comes from an experiment investigating the effect of siRNA knockdown of the *pasilla* gene in Drosophila.
 
 
-## 1. Setup and Load Libraries
+## Setup and Load Libraries
 ```{r}
 #| echo: true
 #| include: true
-library(DESeq2)
-library(ggplot2)
-library(plotly)
-library(GGally)
-library(matrixStats)
+#| eval: false
+library(DESeq2)       # Differential expression analysis
+library(ggplot2)      # Static plotting
+library(plotly)       # Interactive plotting
+library(matrixStats)  # For computing row variances
+library(pheatmap)     # Static heatmaps
+library(heatmaply)    # Interactive heatmaps
+library(htmlwidgets)  # Saving interactive widgets
+library(org.Dm.eg.db) # Drosophila gene annotations - Must be installed with constraint `BiocManager::install("org.Dm.eg.db")`
+library(AnnotationDbi)# Annotation database interface
+
+
+
 ```
-## Data Loading and Preparation - Count Matrix
+
+## Data Loading — Count Matrix
 ```{r}
 #| echo: true
 #| include: true
 # Load the count matrix and sample annotation.
 # Adjust file paths as needed.
-countData <- read.delim("../data/deseq/pasilla_gene_counts.tsv", row.names = 1)
+countData <- read.delim("../data/pasilla_gene_counts.tsv", row.names = 1)
 head(countData)
 ```
-## Sample Annotation
+
+## Data Loading — Sample Annotation
 ```{r}
 #| echo: true
 #| include: true
-colData <- read.csv("../data/deseq/pasilla_sample_annotation.csv", row.names = 1)
+colData <- read.csv("../data/pasilla_sample_annotation.csv", row.names = 1)
 # Ensure the 'condition' variable is a factor.
 colData$condition <- as.factor(colData$condition)
 head(colData)
 ```
-## Adjust Data Order
+
+## Align Sample Order
 ```{r}
 #| echo: true
 #| include: true
-
 # It is critical that the order of columns in countData matches the rows in colData.
 all(rownames(colData) == colnames(countData))  # Should be TRUE
 colData <- colData[colnames(countData), ]
 all(rownames(colData) == colnames(countData))
 print(colData)
 ```
-## 3. Create DESeqDataSet and Filter Genes
 
+## Create DESeqDataSet
 ```{r}
 #| echo: true
 #| include: true
@@ -77,13 +103,12 @@ dds <- DESeqDataSetFromMatrix(countData = countData,
 metadata <- data.frame(gene = rownames(countData))
 mcols(dds) <- DataFrame(mcols(dds), metadata)
 print(dds)
-
 ```
+
 ## Filter Genes with Low Counts
 ```{r}
 #| echo: true
 #| include: true
-
 # Filter out genes with low counts (total count < 3) to reduce noise.
 keep <- rowSums(counts(dds)) >= 3
 dds <- dds[keep, ]
@@ -93,8 +118,12 @@ print(levels(dds$condition))
 dds$condition <- relevel(dds$condition, ref = "untreated")
 print(levels(dds$condition))
 ```
-## 4. Differential Expression Analysis with DESeq2
 
+> 📝 **Task 1** — Plot a histogram of the row sums to examine the count distribution before filtering.
+
+> 📝 **Task 2** — Use `table()` to determine how many genes have total counts less than 3.
+
+## Differential Expression Analysis
 ```{r}
 #| echo: true
 #| include: true
@@ -106,6 +135,8 @@ dds <- DESeq(dds)
 res <- results(dds)
 summary(res)
 ```
+
+## DESeq2 Results
 ```{r}
 #| echo: true
 #| include: true
@@ -113,9 +144,11 @@ summary(res)
 res05 <- results(dds, alpha = 0.05)
 summary(res05)
 ```
-## 5. Variance Stabilizing Transformation (VST)
+
+## Variance Stabilizing Transformation (VST)
 ```{r}
 #| echo: true
+#| include: true
 # RNA-Seq count data have wide ranges and variance increases with the mean.
 # VST transforms the data so that variance is approximately constant, making it
 # better suited for visualizations like PCA and heatmaps.
@@ -124,6 +157,7 @@ pcaData <- plotPCA(vsd, intgroup = "condition", returnData = TRUE)
 pcaData$type <- colData$type  # Add sequencing type for extra context.
 percentVar <- round(100 * attr(pcaData, "percentVar"))
 ```
+
 ## PCA: Principal Component Analysis
 ```{r}
 #| echo: true
@@ -136,6 +170,7 @@ p_pca <- ggplot(pcaData, aes(PC1, PC2, color = condition, shape = type)) +
   theme_minimal()
 p_pca
 ```
+
 ## Interactive PCA Plot
 ```{r}
 #| echo: true
@@ -143,6 +178,7 @@ p_pca
 # Convert the PCA plot into an interactive plot using plotly.
 ggplotly(p_pca)
 ```
+
 ## MDS: Multidimensional Scaling
 ```{r}
 #| echo: true
@@ -162,7 +198,7 @@ p_mds <- ggplot(mdsData, aes(MDS1, MDS2, color = condition, shape = type)) +
 p_mds
 ```
 
-## 7. Pairs Plot
+## Pairs Plot
 ```{r}
 #| echo: true
 #| include: true
@@ -171,6 +207,7 @@ p_mds
 vsd_df <- as.data.frame(assay(vsd))
 pairs(vsd_df, col="#00000010")
 ```
+
 ## MA Plot
 ```{r}
 #| echo: true
@@ -179,6 +216,7 @@ pairs(vsd_df, col="#00000010")
 # Significant genes (FDR < 0.05) are highlighted.
 plotMA(res05, main = "DESeq2 MA-Plot (FDR < 0.05)", ylim = c(-5, 5))
 ```
+
 ## Volcano Plot
 ```{r}
 #| echo: true
@@ -192,7 +230,9 @@ p_volcano <- ggplot(volcanoData, aes(x = log2FoldChange, y = -log10(padj), text 
   xlab("Log2 Fold Change") +
   ylab("-Log10 Adjusted P-Value") +
   theme_minimal()
+p_volcano
 ```
+
 ## Interactive Volcano Plot
 ```{r}
 #| echo: true
@@ -200,11 +240,13 @@ p_volcano <- ggplot(volcanoData, aes(x = log2FoldChange, y = -log10(padj), text 
 # Make the volcano plot interactive.
 ggplotly(p_volcano, tooltip = c("text", "x", "y"))
 ```
-## 9. Accounting for Technical Variation
+
+## Accounting for Technical Variation
 Sometimes technical variables—like sequencing type (single-read vs. paired-end)—can affect your results. To account for this, include the technical variable as a covariate in your design:
 
 ```{r}
 #| echo: true
+#| include: true
 # Adjust the 'type' variable to remove extra characters and ensure it's a factor.
 colData$type <- as.factor(gsub("-.+","", colData$type))
 dds2 <- DESeqDataSetFromMatrix(countData = countData,
@@ -218,51 +260,57 @@ res2 <- results(dds2, contrast = c("condition", "untreated", "treated"))
 summary(res2)
 ```
 
-## Static Heatmaps with pheatmap
+> 📝 **Task 3** — Compare the number of DEGs (FDR < 0.05) from this model with the previous one.
+
+## Heatmap: Top Expressed Genes
 ```{r}
 #| echo: true
+#| include: true
 # Normalize data for heatmap visualization.
 ntd2 <- normTransform(dds2)
-library(pheatmap)
 df <- as.data.frame(colData(dds2)[, c("condition", "type")])
+# Heatmap of the top 20 most expressed genes.
+select <- order(rowMeans(counts(dds2, normalized = TRUE)), decreasing = TRUE)[1:20]
+pheatmap(assay(ntd2)[select, ], cluster_rows = FALSE, show_rownames = FALSE,
+         cluster_cols = FALSE, annotation_col = df)
+```
+
+## Heatmap: Differentially Expressed Genes
+```{r}
+#| echo: true
+#| include: true
 # Heatmap with hierarchical clustering for differentially expressed genes (padj < 0.01).
-select <- res2$padj < 0.001
+res2_05 <- results(dds2, alpha = 0.05, contrast = c("condition", "untreated", "treated"))
+select <- res2_05$padj < 0.01
 select[is.na(select)] <- FALSE
 pheatmap(assay(ntd2)[select, ], cluster_rows = TRUE, show_rownames = FALSE,
          cluster_cols = TRUE, annotation_col = df, scale = "row",
          color = colorRampPalette(c("blue", "white", "red"))(100))
 ```
+
+> 📝 **Task 4** — Export this heatmap as a PNG file using `png()`, `pheatmap()`, and `dev.off()`.
+
 ## Interactive Heatmap with heatmaply
 ```{r}
 #| echo: true
 #| include: true
 # Create an interactive heatmap and export it as an HTML file.
-library(heatmaply)
-library(htmlwidgets)
 p <- heatmaply(assay(ntd2)[select, ], scale = "row", k_row = 3, k_col = 3)
 saveWidget(p, "../work_dir/heatmaply.html")
 p  # Display interactive heatmap
 ```
 
-
-
----
-
-## 11. Gene Annotation
+## Gene Annotation
 ```{r}
 #| echo: true
 #| include: true
 # Retrieve gene annotations using the org.Dm.eg.db package.
 # This provides gene symbols and descriptions based on FlyBase IDs.
-
-library(org.Dm.eg.db)
-library(AnnotationDbi)
 fly_ids <- rownames(countData)
 fly_genes <- select(org.Dm.eg.db, keys = fly_ids, columns = c("SYMBOL", "GENENAME"),
                     keytype = "FLYBASE")
 
 # Merge annotation data with differential expression results.
-res2_05 <- results(dds2, alpha = 0.05, contrast = c("condition", "untreated", "treated"))
 res2_05_reordered <- res2_05[order(res2_05$padj), ]
 res2_05_annotated <- merge(as.data.frame(res2_05_reordered),
                            fly_genes, by.x = "row.names",
@@ -270,11 +318,13 @@ res2_05_annotated <- merge(as.data.frame(res2_05_reordered),
 res2_05_annotated <- res2_05_annotated[order(res2_05_annotated$padj), ]
 write.csv(res2_05_annotated, "../work_dir/deseq2_results_annotated.csv", row.names = FALSE)
 ```
-## Table of Annotated Results
+
+> 📝 **Task 5** — Create a data frame combining `res2_05_annotated` with per-sample expression values from `assay(vsd2)`.
+
+## Annotated Results Table
 ```{r}
-library(knitr)
-library(kableExtra)
-#| echo: true
+#| echo: false
 #| include: true
-kable(head(res2_05_annotated,20),format.args = list(scientific = TRUE, digits = 2)) %>% kable_styling(font_size = 14, full_width = FALSE)
+kable(head(res2_05_annotated, 20), format.args = list(scientific = TRUE, digits = 2)) %>%
+  kable_styling(font_size = 14, full_width = FALSE)
 ```
