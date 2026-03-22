@@ -1,8 +1,7 @@
 # Assignment 5: Data Visualisation with ggplot2 — Outbreak Epidemiology
 
 ## Background
-
-Visualising epidemiological data is one of the most impactful applications of data science in public health. In this assignment you will build a series of publication-quality figures using three real outbreak datasets originally distributed through the [`outbreaks`](https://CRAN.R-project.org/package=outbreaks) R package:
+In this assignment you will build a series of publication-quality figures using three real outbreak datasets originally distributed through the [`outbreaks`](https://CRAN.R-project.org/package=outbreaks) R package:
 
 | File | Dataset | Description |
 |---|---|---|
@@ -20,6 +19,46 @@ All files are in `05_ggplot2/data/`. The assignment practices data import, `scal
 library(ggplot2)
 library(tidyr)    # for pivot_longer()
 ```
+
+---
+
+## Dates in R
+
+When you load a CSV file, R reads date columns as plain character strings — `"1995-04-10"` is just text. To work with dates properly (sort them, compute differences, plot them on a time axis) you must convert them to R's `Date` type using `as.Date()`.
+
+```r
+# A date stored as a string — R treats it like any other text
+d_str <- "1995-04-10"
+class(d_str)   # "character"
+
+# Convert to a Date object
+d <- as.Date("1995-04-10")
+class(d)       # "Date"
+```
+
+**Why does the format matter?**
+
+`as.Date()` expects dates in `YYYY-MM-DD` format by default. If your dates look different (e.g. `"10/04/1995"` or `"10 Apr 95"`), you must tell R the format using the `format` argument and `strftime` codes:
+
+```r
+as.Date("10/04/1995", format = "%d/%m/%Y")   # day/month/year
+as.Date("Apr 10 1995", format = "%b %d %Y")  # abbreviated month name
+```
+
+Common format codes: `%Y` = 4-digit year, `%m` = 2-digit month, `%d` = 2-digit day, `%b` = abbreviated month name (Jan, Feb, …).
+
+**What can you do with `Date` objects?**
+
+```r
+d1 <- as.Date("1995-04-10")
+d2 <- as.Date("1995-05-20")
+
+d2 - d1          # difference in days: 40
+d1 + 30          # add 30 days: "1995-05-10"
+d1 < d2          # comparison: TRUE
+```
+
+This is exactly what you need in Tasks 1 and 5 — subtracting two `Date` columns gives the number of days between events, and ggplot2's `scale_x_date()` can only display dates correctly if the column is of class `Date`.
 
 ---
 
@@ -43,12 +82,36 @@ The flu dataset has several date columns (`date_of_onset`, `date_of_hospitalisat
 
 ---
 
+## `geom_col()` vs `geom_bar()`
+
+ggplot2 has two geoms for bar charts — they differ in what they expect from your data:
+
+| | `geom_bar()` | `geom_col()` |
+|---|---|---|
+| **y mapping** | not needed — counts rows automatically | required — uses an existing column as bar height |
+| **typical use** | when you have raw observations and want to count them | when your data already contains the values to plot |
+| **equivalent to** | `geom_bar(stat = "count")` | `geom_bar(stat = "identity")` |
+
+```r
+# geom_bar() — counts how many rows per category
+ggplot(flu, aes(x = province)) +
+  geom_bar()
+
+# geom_col() — uses a pre-computed column as bar height
+ggplot(ebola, aes(x = date, y = onset)) +
+  geom_col()
+```
+
+In this assignment, the Ebola dataset already has a column `onset` with daily counts, so `geom_col()` is the right choice. Use `geom_bar()` when you want ggplot2 to do the counting for you (as in Task 4).
+
+---
+
 ## Task 2: Ebola Epidemic Curve — Bar Chart with `scale_x_date()`
 
 Plot the daily number of new **onset** cases as a bar chart over time.
 
 - Map `date` to x and `onset` to y.
-- Use `geom_col()` (or `geom_bar(stat = "identity")`).
+- Use `geom_col()`.
 - Format the x-axis to show months using `scale_x_date(date_labels = "%b %Y", date_breaks = "1 month")`.
 - Rotate x-axis labels 45° with `theme(axis.text.x = element_text(angle = 45, hjust = 1))`.
 - Add a meaningful title and axis labels.
