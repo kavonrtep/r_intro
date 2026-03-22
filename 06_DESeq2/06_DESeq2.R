@@ -108,7 +108,7 @@ keep <- rowSums(counts(dds)) >= 3
 
 # TASK 1:
 # Plot a histogram of the row sums to examine the count distribution before filtering.
-# Hint: use hist(rowSums(counts(dds))) or ggplot2 with as.data.frame().
+# Hint: use hist(rowSums(counts(dds))).
 
 # TASK 2:
 # Use table() to determine how many genes have total counts less than 3.
@@ -118,12 +118,19 @@ keep <- rowSums(counts(dds)) >= 3
 dds <- dds[keep, ]
 cat("Number of genes after filtering:", nrow(dds), "\n")
 
-# Set the reference level for 'condition'. This is crucial for proper interpretation of contrasts.
-print(dds$condition)
-# If the default (alphabetical) order is not desired, set the levels manually.
-dds$condition <- factor(dds$condition, levels = c("untreated", "treated"))
-# Alternatively, relevel so that 'untreated' is the reference.
+# ---------- SLIDE: Setting the Reference Level ----------
+# DESeq2 reports fold changes as condition A / condition B.
+# The reference level is the denominator — the baseline group everything is compared to.
+# By default R orders factor levels alphabetically: "treated" before "untreated",
+# so fold changes would be untreated/treated — the opposite of what we want.
+print(levels(dds$condition))   # check current order
+
+# relevel() moves "untreated" to position 1 (= reference)
 dds$condition <- relevel(dds$condition, ref = "untreated")
+print(levels(dds$condition))   # "untreated" is now first
+
+# Now a positive log2FC means higher expression in treated vs untreated.
+# Always set the reference level BEFORE running DESeq().
 
 # NOTE: For technical replicates (multiple sequencing runs of the same library),
 # DESeq2 offers the collapseReplicates() function. Do not use this function to merge biological replicates.
@@ -332,6 +339,25 @@ saveWidget(p, "work_dir/heatmaply.html")
 ################################################################################
 # SECTION 10: GENE ANNOTATION
 ################################################################################
+
+# ---------- SLIDE: Joining Data Frames with merge() ----------
+# merge() combines two data frames by matching values in a shared column.
+# This is equivalent to a database JOIN operation.
+#
+# Key arguments:
+#   by      — column name to match on (when both frames share the same name)
+#   by.x / by.y — key column names when they differ between the two frames
+#   all.x = TRUE — left join: keep all rows from the left frame, fill unmatched with NA
+#
+# Example:
+#   results_df <- data.frame(gene_id = c("A","B","C"), log2FC = c(1.2,-0.8,2.1))
+#   annotation <- data.frame(gene_id = c("A","C","D"), symbol = c("geneA","geneC","geneD"))
+#
+#   merge(results_df, annotation, by = "gene_id")               # inner join
+#   merge(results_df, annotation, by = "gene_id", all.x = TRUE) # left join
+#
+# In the annotation step below the key is "row.names" in results and "FLYBASE"
+# in the annotation table, so we use by.x / by.y.
 
 # ---------- SLIDE: Gene Annotation ----------
 # Retrieve gene annotations (e.g., gene symbols and descriptions) from FlyBase.

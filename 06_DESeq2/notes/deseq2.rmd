@@ -58,6 +58,21 @@ library(AnnotationDbi)# Annotation database interface
 
 
 ```
+## Overview
+
+A typical bulk RNA-seq experiment produces raw FASTQ files — millions of short sequencing reads per sample. Before any statistical analysis, these reads must be mapped to the genome and assigned to genes. Typical workflows include:
+
+```
+FASTQ reads    ->    quality control (FastQC / MultiQC)    ->
+
+alignment (Bowtie2 / HISAT2 / STAR) ->  BAM files (sorted, indexed) ->
+
+counting (featureCounts / HTSeq-count) -> count matrix → DESeq2 differential expression
+
+```
+Here we will use DESeq2 package to process the **count matrix** and perform differential expression analysis.
+
+
 
 ## Data Loading — Count Matrix
 ```{r}
@@ -113,15 +128,31 @@ print(dds)
 keep <- rowSums(counts(dds)) >= 3
 dds <- dds[keep, ]
 cat("Number of genes after filtering:", nrow(dds), "\n")
-# Set 'untreated' as the reference level for condition.
-print(levels(dds$condition))
-dds$condition <- relevel(dds$condition, ref = "untreated")
-print(levels(dds$condition))
 ```
 
 > 📝 **Task 1** — Plot a histogram of the row sums to examine the count distribution before filtering.
 
 > 📝 **Task 2** — Use `table()` to determine how many genes have total counts less than 3.
+
+## Setting the Reference Level
+
+DESeq2 reports fold changes as **condition A / condition B**. The **reference level** is the denominator — the baseline group everything is compared to.
+
+By default R orders factor levels alphabetically: `"treated"` comes before `"untreated"`, so fold changes would be **untreated / treated** — the opposite of what we want.
+
+```{r}
+#| echo: true
+#| include: true
+# Check the current factor levels — first level is the reference
+print(levels(dds$condition))
+
+# relevel() moves "untreated" to position 1 (= reference)
+dds$condition <- relevel(dds$condition, ref = "untreated")
+print(levels(dds$condition))
+```
+
+Now a **positive** log2FC means higher expression in **treated** vs untreated.
+Always set the reference level **before** running `DESeq()`.
 
 ## Differential Expression Analysis
 ```{r}
@@ -299,6 +330,32 @@ p <- heatmaply(assay(ntd2)[select, ], scale = "row", k_row = 3, k_col = 3)
 saveWidget(p, "../work_dir/heatmaply.html")
 p  # Display interactive heatmap
 ```
+
+## Joining Data Frames with `merge()`
+
+`merge()` combines two data frames by matching values in a shared column — like a database JOIN.
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+# Two data frames sharing a common key column
+results_df  <- data.frame(gene_id = c("A", "B", "C"),
+                          log2FC  = c(1.2, -0.8, 2.1))
+annotation  <- data.frame(gene_id = c("A", "C", "D"),
+                          symbol  = c("geneA", "geneC", "geneD"))
+
+merge(results_df, annotation, by = "gene_id")          # inner join — only matching rows
+merge(results_df, annotation, by = "gene_id", all.x = TRUE)  # left join — keep all results rows
+```
+
+Key arguments:
+
+- `by` — column name to match on (when both frames use the same name)
+- `by.x` / `by.y` — use when the key column has **different names** in each frame
+- `all.x = TRUE` — **left join**: keep every row from the left frame; fill unmatched with `NA`
+
+In the gene annotation step the key column is named `"row.names"` in the results frame and `"FLYBASE"` in the annotation frame, so we use `by.x` / `by.y`.
 
 ## Gene Annotation
 ```{r}
