@@ -31,6 +31,10 @@ library(stringr)
 - Use `install.packages("tidyverse")` to install the package.
 - Use `library(tidyverse)` to load the packages.
 
+## dplyr — core verbs
+
+![](dplyr.png){width=55% fig-align="center"}
+
 ## Tidyverse `reader` package
 
 - The `readr` package provides functions for reading data into R.
@@ -114,6 +118,8 @@ head(select(df, `Gene Description`))
 - Use `starts_with()`, `ends_with()`, `contains()`, `matches()` to select by name patterns.
 - See `?select` for more details.
 
+![](select.png){width=70% fig-align="center"}
+
 ## `select()` function examples
 
 ```{r}
@@ -148,6 +154,8 @@ df %>%
 - Use logical operators: `==`, `!=`, `>`, `<`, `>=`, `<=`, `%in%`, `&`, `|`, `!`
 - Use `between()` to filter rows within a range.
 
+![](filter.png){width=70% fig-align="center"}
+
 ```{r}
 #| echo: true
 #| include: true
@@ -162,6 +170,8 @@ print(kinase_df)
 
 - `mutate()` is used to create new columns or modify existing columns.
 - Syntax: `mutate(data, new_column = expression)`
+
+![](mutate.png){width=70% fig-align="center"}
 
 ```{r}
 #| echo: true
@@ -190,6 +200,12 @@ print(df_extended)
 - `group_by()` groups data by one or more variables.
 - `summarize()` calculates summary statistics for each group.
 - Use `ungroup()` to remove grouping.
+
+![](summarize.png){width=60% fig-align="center"}
+
+## `group_by()` — splits data into groups
+
+![](group_by.png){width=40% fig-align="center"}
 
 ```{r}
 #| echo: true
@@ -232,6 +248,10 @@ print(control_summary)
 - Wide data: multiple columns for each variable.
 - Long data: multiple rows for each variable.
 
+## Wide vs long format
+
+![](wide_vs_long.png){width=65% fig-align="center"}
+
 ## Wide format example
 
 ```{r}
@@ -266,6 +286,10 @@ long_df <- wide_df %>%
 print(long_df)
 ```
 
+## `pivot_longer()` — example
+
+![](pivot_longer_data.png){width=90% fig-align="center"}
+
 ## Converting long data to wide data
 
 - `pivot_wider(data, names_from, values_from)`
@@ -289,6 +313,12 @@ print(wide_df)
 - `right_join()`: all rows from right + matched rows from left.
 - `inner_join()`: only rows with matching values in both tables.
 - `full_join()`: all rows from either table.
+
+## Types of joins
+
+![](different-types-of-joins-in-R.png){width=60% fig-align="center"}
+
+## Data joining — examples
 
 ```{r}
 #| echo: true
