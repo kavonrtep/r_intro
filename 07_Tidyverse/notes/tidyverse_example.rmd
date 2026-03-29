@@ -1,0 +1,395 @@
+---
+title: "Hands-On Data Cleaning & Manipulation with Tidyverse"
+subtitle: "Golub et al. Leukemia Gene Expression Data"
+format:
+  revealjs:
+    self-contained: true
+    slide-number: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+
+```{r}
+#| echo: false
+#| include: false
+knitr::opts_knit$set(root.dir = "../../")
+library(tidyverse)
+library(pheatmap)
+library(knitr)
+```
+
+## Overview
+
+This walkthrough applies tidyverse tools to a real microarray dataset.
+
+You will learn to:
+
+- Load and inspect gene expression data with `readr`
+- Clean columns with `select()` and `filter()`
+- Add new variables with `mutate()`
+- Summarize groups with `group_by()` / `summarize()`
+- Reshape data with `pivot_longer()` / `pivot_wider()`
+- Merge data frames with `left_join()`
+- Visualize results with `ggplot2` and `pheatmap`
+
+## The Dataset
+
+**Golub et al. (1999)** — gene expression profiling of two types of acute leukemia:
+
+- **ALL** — Acute Lymphoblastic Leukemia
+- **AML** — Acute Myeloid Leukemia
+
+Data files in `data/aml/`:
+
+| File | Description |
+|---|---|
+| `data_set_ALL_AML_train.csv` | Expression matrix + detection calls |
+| `annotation.csv` | Patient → cancer type mapping |
+
+## 1. Load the Data
+
+```{r}
+#| echo: true
+#| include: true
+library(tidyverse)
+train_file <- "data/aml/data_set_ALL_AML_train.csv"
+expr <- read_csv(train_file)
+```
+
+## 1. Inspect the Data
+
+```{r}
+#| echo: true
+#| include: true
+print(dim(expr))
+print(colnames(expr)[1:10])
+```
+
+## 1. Inspect the Data (cont'd)
+
+```{r}
+#| echo: true
+#| include: true
+print(head(expr[, 1:5]))
+```
+
+Each row is a gene. Numeric columns are expression values; `call*` columns are detection flags (`"P"`, `"M"`, `"A"`).
+
+## 2. Remove "call" Columns
+
+```{r}
+#| echo: true
+#| include: true
+expr_clean <- expr %>% select(-contains("call"))
+print(colnames(expr_clean)[1:10])
+```
+
+## 2. Verify Dimensions
+
+```{r}
+#| echo: true
+#| include: true
+print(dim(expr_clean))
+```
+
+`-contains("call")` dropped every column whose name includes `"call"`.
+
+## 3. Filter Kinase Genes
+
+```{r}
+#| echo: true
+#| include: true
+kinase_genes <- expr_clean %>%
+  filter(str_detect(`Gene Description`, "kinase"))
+print(paste("Number of kinase-related genes:", nrow(kinase_genes)))
+print(head(kinase_genes$`Gene Description`, 10))
+```
+
+## 3. Filter Ribosomal Genes
+
+```{r}
+#| echo: true
+#| include: true
+ribosomal_genes <- expr_clean %>%
+  filter(str_detect(`Gene Description`, "ribosomal"))
+print(paste("Number of ribosomal-related genes:", nrow(ribosomal_genes)))
+```
+
+## 4. Flag Control Probes
+
+Control probes have accession numbers starting with `"AFFX"`. The `^` anchors to the start of the string.
+
+```{r}
+#| echo: true
+#| include: true
+expr_clean <- expr_clean %>%
+  mutate(IsControl = str_detect(`Gene Accession Number`, "^AFFX"))
+print(head(expr_clean %>%
+  select(`Gene Description`, `Gene Accession Number`, IsControl)))
+```
+
+## 4. Count Control vs. Biological Probes
+
+```{r}
+#| echo: true
+#| include: true
+print(table(expr_clean$IsControl))
+```
+
+## 5. Compute Average Expression per Gene
+
+`rowMeans()` calculates the mean across all sample columns for each row.
+
+```{r}
+#| echo: true
+#| include: true
+expr_clean <- expr_clean %>%
+  mutate(AvgExpr = rowMeans(
+    select(., -c(`Gene Description`, `Gene Accession Number`, IsControl)),
+    na.rm = TRUE
+  ))
+print(head(expr_clean %>% select(`Gene Description`, AvgExpr)))
+```
+
+## 5. Summarize by Control Status
+
+```{r}
+#| echo: true
+#| include: true
+control_summary <- expr_clean %>%
+  group_by(IsControl) %>%
+  summarize(mean_expr = mean(AvgExpr), sd_expr = sd(AvgExpr))
+print(control_summary)
+```
+
+Control probes show systematically different expression levels from biological genes.
+
+## 6. Reshape: Wide → Long Format
+
+Long format (one row per gene–sample) is required by `ggplot2`.
+
+```{r}
+#| echo: true
+#| include: true
+expr_long <- expr_clean %>%
+  pivot_longer(
+    cols = -c(`Gene Description`, `Gene Accession Number`, IsControl, AvgExpr),
+    names_to = "Sample",
+    values_to = "Expression"
+  )
+print(head(expr_long))
+```
+
+## 6. Long Format Dimensions
+
+```{r}
+#| echo: true
+#| include: true
+print(dim(expr_long))  # rows = genes × samples
+```
+
+## 7. Reshape Call Columns
+
+```{r}
+#| echo: true
+#| include: true
+calls_long <- expr %>%
+  select(`Gene Accession Number`, contains("call")) %>%
+  pivot_longer(
+    cols = -`Gene Accession Number`,
+    names_to = "SampleCall",
+    values_to = "Call"
+  ) %>%
+  mutate(Sample = str_remove(SampleCall, "^call[.]+")) %>%
+  select(-SampleCall)
+print(head(calls_long))
+```
+
+## 7. Renumber Samples and Join
+
+```{r}
+#| echo: true
+#| include: true
+f <- function(x) { (x - 2) / 2 }
+calls_long$Sample <- calls_long$Sample %>%
+  as.numeric() %>% f() %>% as.character()
+
+expr_long <- expr_long %>%
+  left_join(calls_long, by = c("Gene Accession Number", "Sample"))
+print(table(expr_long$Call, useNA = "ifany"))
+```
+
+## 8. Boxplot by Call Category
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 4.5
+p1 <- ggplot(expr_long, aes(x = Call, y = Expression)) +
+  geom_boxplot(outlier.shape = NA) +
+  scale_y_continuous(trans = "log10") +
+  labs(title = "Expression by Call Category",
+       x = "Call (Detection Flag)", y = "Expression (log10)") +
+  theme_minimal()
+print(p1)
+```
+
+## 8. Top 10 Kinase Genes — Bar Plot
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 5
+#| fig-width: 11
+top10_kinases <- expr_clean %>%
+  filter(str_detect(`Gene Description`, "kinase")) %>%
+  arrange(desc(AvgExpr)) %>%
+  slice_head(n = 10) %>%
+  mutate(label = str_trunc(`Gene Description`, 50))
+p2 <- ggplot(top10_kinases,
+             aes(x = reorder(label, AvgExpr), y = AvgExpr)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Top 10 Kinase Genes", x = NULL, y = "Average Expression") +
+  theme_minimal(base_size = 14)
+print(p2)
+```
+
+## 9. Load Annotation
+
+```{r}
+#| echo: true
+#| include: true
+annotation <- read_csv("data/aml/annotation.csv")
+annotation <- annotation %>%
+  rename(Sample = patient) %>%
+  mutate(Sample = as.character(Sample))
+print(head(annotation))
+```
+
+## 9. Merge Annotation with Expression Data
+
+```{r}
+#| echo: true
+#| include: true
+expr_long <- expr_long %>% left_join(annotation, by = "Sample")
+print(head(expr_long %>% select(`Gene Description`, Sample, Expression, cancer)))
+```
+
+## 9. Faceted Boxplot — Top 5 Kinase Genes
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 4.5
+top5_kinases <- expr_clean %>%
+  filter(str_detect(`Gene Description`, "kinase")) %>%
+  arrange(desc(AvgExpr)) %>%
+  slice_head(n = 5) %>%
+  pull(`Gene Description`)
+kinase_subset <- expr_long %>%
+  filter(`Gene Description` %in% top5_kinases)
+p4 <- ggplot(kinase_subset, aes(x = cancer, y = Expression, fill = cancer)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, alpha = 0.6) +
+  facet_wrap(~ `Gene Description`) +
+  labs(title = "Top 5 Kinase Genes by Cancer Type",
+       x = "Cancer Type", y = "Expression") +
+  theme_minimal() + theme(legend.position = "none")
+print(p4)
+```
+
+## 10. Compute Variability Metrics
+
+```{r}
+#| echo: true
+#| include: true
+expr_clean <- expr_clean %>%
+  mutate(
+    Variance = apply(
+      select(., -c(`Gene Description`, `Gene Accession Number`, IsControl, AvgExpr)),
+      1, var),
+    SD = apply(
+      select(., -c(`Gene Description`, `Gene Accession Number`, IsControl, AvgExpr)),
+      1, sd),
+    CoeffVar = SD / AvgExpr
+  )
+print(head(expr_clean %>% select(`Gene Description`, AvgExpr, SD, CoeffVar)))
+```
+
+**CoeffVar** = SD / mean — normalizes variability by expression level.
+
+## 10. Heatmap — Top 100 Variable Genes {.smaller}
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 4.5
+library(pheatmap)
+top100_var_expr <- expr_clean %>%
+  arrange(desc(CoeffVar)) %>%
+  slice_head(n = 100) %>%
+  select(-c(`Gene Description`, `Gene Accession Number`,
+            IsControl, AvgExpr, Variance, SD, CoeffVar))
+pheatmap(top100_var_expr, scale = "row", show_rownames = FALSE,
+         cluster_rows = TRUE, cluster_cols = TRUE,
+         main = "Top 100 Genes — Highest Variance")
+```
+
+## 10. Heatmap with Cancer Type Annotation {.smaller}
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 4.5
+sample_cols <- colnames(top100_var_expr)
+ann <- data.frame(
+  Cancer = annotation$cancer[match(sample_cols, annotation$Sample)],
+  row.names = sample_cols
+)
+pheatmap(top100_var_expr, scale = "row", show_rownames = FALSE,
+         cluster_rows = TRUE, cluster_cols = TRUE,
+         main = "Top 100 Variable Genes by Cancer Type",
+         annotation_col = ann)
+```
+
+## 10. Heatmap — Top 100 by Average Expression {.smaller}
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 4
+top100_avg <- expr_clean %>%
+  arrange(desc(AvgExpr)) %>%
+  slice_head(n = 100)
+top100_avg_expr <- top100_avg %>%
+  select(-c(`Gene Description`, `Gene Accession Number`,
+            IsControl, AvgExpr, Variance, SD, CoeffVar))
+gene_desc <- top100_avg$`Gene Description`
+pheatmap(top100_avg_expr, scale = "row",
+         labels_row = gene_desc, show_rownames = TRUE,
+         cluster_rows = TRUE, cluster_cols = TRUE,
+         clustering_method = "ward.D",
+         clustering_distance_rows = "correlation",
+         clustering_distance_cols = "correlation",
+         main = "Top 100 Genes — Highest Average Expression",
+         annotation_col = ann,
+         color = colorRampPalette(c("blue", "white", "red"))(100))
+```
+
+## Summary
+
+| Step | Function(s) |
+|---|---|
+| Load data | `read_csv()` |
+| Remove columns | `select(-contains(...))` |
+| Filter rows | `filter()`, `str_detect()` |
+| Add columns | `mutate()`, `rowMeans()` |
+| Group summaries | `group_by()`, `summarize()` |
+| Reshape | `pivot_longer()`, `pivot_wider()` |
+| Merge | `left_join()` |
+| Visualize | `ggplot2`, `pheatmap` |

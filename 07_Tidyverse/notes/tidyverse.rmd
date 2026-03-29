@@ -1,8 +1,9 @@
 ---
-title: "Data manipulation and cleaning with Tidyverse"
+title: "Data Manipulation and Cleaning with Tidyverse"
 format:
   revealjs:
     self-contained: true
+    slide-number: true
 editor: visual
 ---
 <style>
@@ -11,7 +12,15 @@ editor: visual
 }
 </style>
 
+```{r}
+#| echo: false
+#| include: false
+library(tidyverse)
+library(stringr)
+```
+
 ## Tidyverse
+
 - **Tidyverse** is a collection of R packages designed for data science.
 - It provides a consistent set of functions and syntax for data manipulation and visualization.
 - Key packages include `dplyr`, `ggplot2`, `tidyr`, and `readr`.
@@ -19,10 +28,11 @@ editor: visual
   - `ggplot2`: data visualization
   - `tidyr`: data cleaning
   - `readr`: data import
-- use `install.packages("tidyverse")` to install the package
-- use `library(tidyverse)` to load the packages
+- Use `install.packages("tidyverse")` to install the package.
+- Use `library(tidyverse)` to load the packages.
 
 ## Tidyverse `reader` package
+
 - The `readr` package provides functions for reading data into R.
 - The functions are similar to base R functions like `read.csv()`, but faster and more user-friendly.
 - Common functions:
@@ -31,7 +41,8 @@ editor: visual
   - `read_delim()`: reads files with custom delimiters.
   - `read_fwf()`: reads fixed-width files.
   - `read_table()`: reads tabular data.
-- returns a `tibble`, a modern version of a data frame.
+- Returns a `tibble`, a modern version of a data frame.
+
 ## Sample data
 
 ```{r}
@@ -39,10 +50,10 @@ editor: visual
 #| include: true
 library(tidyverse)
 
-# 1. Basic Data Inspection
-# Create a small tibble simulating a gene expression dataset.
 df <- tibble(
-  `Gene Description` = c("Protein kinase C (alpha)", "Ribosomal protein L2", "ATP synthase", "Control gene"),
+  `Gene Description` = c("Protein kinase C (alpha)",
+                         "Ribosomal protein L2",
+                         "ATP synthase", "Control gene"),
   `Gene Accession Number` = c("Gene1", "Gene2", "Gene3", "AFFX-Control"),
   Sample1 = c(5.2, 3.4, 7.8, 1.2),
   call1 = c("P", "A", "P", "A"),
@@ -52,20 +63,19 @@ df <- tibble(
 ```
 
 ## Sample data (cont'd)
+
 ```{r}
 #| echo: true
 #| include: true
-# Inspect dimensions (number of rows and columns)
-print(dim(df))  # e.g., 4 rows, 6 columns
-
-# Print column names
+print(dim(df))
 print(colnames(df))
-
-# Show the first few rows of the dataset
 print(head(df))
 ```
+
 ## Using the Pipe Operator: `%>%`
+
 - The `%>%` operator passes the result of one function into the next.
+
 ```{r}
 #| echo: true
 #| include: true
@@ -78,12 +88,10 @@ m <- s %>% mean()
 m <- rnorm(100) %>% mean()
 # is equivalent to
 m <- mean(rnorm(100))
-
 ```
 
-
 ## Using the Pipe Operator (%>%)
-- The `%>%` operator passes the result of one function into the next.
+
 - Here, we select the "Gene Description" column and then display its head.
 
 ```{r}
@@ -95,18 +103,16 @@ df %>%
 
 # This is equivalent to
 head(select(df, `Gene Description`))
-
 ```
+
 ## `select()` function (dplyr package)
 
 - The `select()` function is used to select columns from a data frame.
-- It can be used to reorder columns or to exclude columns.
 - Syntax: `select(data, column1, column2, ...)`
-- Use `:` to select a range of columns.
 - Use `-` to exclude columns.
-- Use `everything()` to include all columns.
-- Use `starts_with()`, `ends_with()`, `contains()`, `matches()`, `one_of()` to select columns based on name patterns.
-- see `?select` for more details.
+- Use `everything()` to include all remaining columns.
+- Use `starts_with()`, `ends_with()`, `contains()`, `matches()` to select by name patterns.
+- See `?select` for more details.
 
 ## `select()` function examples
 
@@ -117,30 +123,43 @@ head(select(df, `Gene Description`))
 df %>%
   select(`Gene Description`, `Gene Accession Number`) %>%
   head()
-# remove columns using `-`
+```
+## `select()` function examples
+```{r}
+#| echo: true
+#| include: true
+# Remove columns using `-`
 df %>%
   select(-`Gene Description`, -`Gene Accession Number`) %>%
   head()
-# remove columns using `-` and contains()
+
+# Remove columns using `-` and contains()
 df %>%
   select(-contains("call")) %>%
   head()
 ```
+
+> 📝 **Task 1** — remove columns whose names start with `"call"` using `starts_with()`
+
 ## Filtering rows with `filter()` function
+
 - `filter()` is used to select rows based on conditions.
 - Syntax: `filter(data, condition)`
-- Use logical operators like `==`, `!=`, `>`, `<`, `>=`, `<=`, `%in%`, `&`, `|`, `!` to define conditions.
+- Use logical operators: `==`, `!=`, `>`, `<`, `>=`, `<=`, `%in%`, `&`, `|`, `!`
 - Use `between()` to filter rows within a range.
+
 ```{r}
 #| echo: true
 #| include: true
-
 kinase_df <- df %>%
   filter(str_detect(`Gene Description`, "kinase"))
 print(kinase_df)
-
 ```
+
+> 📝 **Task 2** — filter `df` to keep only rows where `Sample1 > 4`
+
 ## Creating new columns with `mutate()` function
+
 - `mutate()` is used to create new columns or modify existing columns.
 - Syntax: `mutate(data, new_column = expression)`
 
@@ -151,38 +170,36 @@ df_extended <- df %>%
   mutate(IsControl = str_detect(`Gene Accession Number`, "^AFFX"))
 print(df_extended)
 ```
+
 ## Using `mutate()` to create new columns
 
 - Calculate the average expression across Sample1 and Sample2.
-- We select only the numeric sample columns.
 
 ```{r}
 #| echo: true
 #| include: true
-
 df_extended <- df_extended %>%
   mutate(AvgExpr = rowMeans(select(., Sample1, Sample2), na.rm = TRUE))
 print(df_extended)
 ```
+
+> 📝 **Task 3** — add a column `"HighExpr"` that is `TRUE` when `AvgExpr > 5`
+
 ## Grouping and summarizing with `group_by()` and `summarize()`
 
-- `group_by()` is used to group data by one or more variables.
-- Syntax: `group_by(data, column1, column2, ...)`
-- `summarize()` is used to calculate summary statistics for each group.
-- Syntax: `summarize(data, new_column = function(column))`
-- Un-group data using `ungroup()`.
+- `group_by()` groups data by one or more variables.
+- `summarize()` calculates summary statistics for each group.
+- Use `ungroup()` to remove grouping.
 
 ```{r}
 #| echo: true
 #| include: true
 by_cyl <- mtcars %>% group_by(cyl)
-# grouping does not change the data frame (it just adds a grouping attribute)
+# Grouping does not change the data frame (it just adds a grouping attribute)
 print(by_cyl)
 ```
-## Grouping changes the behavior of functions
 
-- When a data frame is grouped, functions like `summarize()` will calculate summary statistics for each group.
-- Here, we calculate the mean `mpg` for each number of cylinders.
+## Grouping changes the behavior of functions
 
 ```{r}
 #| echo: true
@@ -194,7 +211,9 @@ by_cyl_gear <- mtcars %>% group_by(cyl, gear) %>%
   summarize(mean_mpg = mean(mpg))
 print(by_cyl_gear)
 ```
+
 ## Grouping (cont'd)
+
 ```{r}
 #| echo: true
 #| include: true
@@ -204,19 +223,22 @@ control_summary <- df_extended %>%
 print(control_summary)
 ```
 
+> 📝 **Task 4** — calculate median horsepower (`hp`) per cylinder count in `mtcars`
+
 ## Reshaping data with `pivot_longer()` and `pivot_wider()` functions
 
-- `pivot_longer()` is used to convert wide data to long data.
-- `pivot_wider()` is used to convert long data to wide data.
-- Wide data has multiple columns for each variable.
-- Long data has multiple rows for each variable.
+- `pivot_longer()`: converts wide data to long data.
+- `pivot_wider()`: converts long data to wide data.
+- Wide data: multiple columns for each variable.
+- Long data: multiple rows for each variable.
 
 ## Wide format example
+
 ```{r}
 #| echo: true
 #| include: true
 wide_df <- tibble(
-  ID = c(1, 2, 3,4),
+  ID = c(1, 2, 3, 4),
   Gene = c("Gene1", "Gene2", "Gene3", "Gene4"),
   Expr1 = c(5.2, 3.4, 7.8, 1.2),
   Expr2 = c(5.5, 3.8, 8.0, 1.3),
@@ -226,12 +248,14 @@ wide_df <- tibble(
 )
 print(wide_df)
 ```
+
 ## Long format example
-- Function `pivot_longer()` is used to convert wide data to long data.
-- syntax: `pivot_longer(data, cols, names_to, values_to)`
-- `cols` is a selection of columns to convert to long format.
-- `names_to` is the name of the new column that will store the column names.
-- `values_to` is the name of the new column that will store the values.
+
+- `pivot_longer(data, cols, names_to, values_to)`
+  - `cols`: columns to pivot.
+  - `names_to`: new column that stores original column names.
+  - `values_to`: new column that stores the values.
+
 ```{r}
 #| echo: true
 #| include: true
@@ -241,11 +265,13 @@ long_df <- wide_df %>%
                values_to = "Expression")
 print(long_df)
 ```
+
 ## Converting long data to wide data
-- Function `pivot_wider()` is used to convert long data to wide data.
-- syntax: `pivot_wider(data, names_from, values_from)`
-- `names_from` is the name of the column that will be used to create new columns.
-- `values_from` is the name of the column that will be used to fill the new columns.
+
+- `pivot_wider(data, names_from, values_from)`
+  - `names_from`: column whose values become new column names.
+  - `values_from`: column whose values fill the new columns.
+
 ```{r}
 #| echo: true
 #| include: true
@@ -254,11 +280,16 @@ wide_df <- long_df %>%
               values_from = "Expression")
 print(wide_df)
 ```
+
+> 📝 **Task 5** — add a `log2Expr` column to `long_df`, then pivot back to wide format
+
 ## Data joining with `left_join()`, `right_join()`, `inner_join()`, and `full_join()`
-- `left_join()`: returns all rows from the left table and the matched rows from the right table.
-- `right_join()`: returns all rows from the right table and the matched rows from the left table.
-- `inner_join()`: returns only the rows that have matching values in both tables.
-- `full_join()`: returns all rows when there is a match in either table.
+
+- `left_join()`: all rows from left + matched rows from right.
+- `right_join()`: all rows from right + matched rows from left.
+- `inner_join()`: only rows with matching values in both tables.
+- `full_join()`: all rows from either table.
+
 ```{r}
 #| echo: true
 #| include: true
@@ -269,159 +300,147 @@ print(joined_df)
 joined_df <- df1 %>% right_join(df2, by = "ID")
 print(joined_df)
 ```
-## Data joining with `left_join()`, `right_join()`, `inner_join()`, and `full_join()`
+
+## Data joining (cont'd)
+
 ```{r}
 #| echo: true
 #| include: true
 df1 <- tibble(ID = c(1, 2, 3), Value = c(10, 20, 30))
 df2 <- tibble(ID = c(2, 3, 4), Value = c(200, 300, 400))
+
 joined_df <- df1 %>% inner_join(df2, by = "ID")
 print(joined_df)
+
 joined_df <- df1 %>% full_join(df2, by = "ID")
 print(joined_df)
 ```
 
-
-
-
-
+> 📝 **Task 6** — create `df3 <- tibble(ID = c(1,3,5), Label = c("A","B","C"))` and `full_join()` it with `df1`. Which rows get `NA`? Why?
 
 ## String manipulation with functions from `stringr` package
-- The `stringr` package provides functions for string manipulation.
-- The most common functions:
+
+- Common functions:
   - `str_detect()`: detect patterns in strings.
   - `str_replace()`: replace patterns in strings.
   - `str_split()`: split strings based on patterns.
   - `str_sub()`: extract substrings.
-  - `str_trim()`: remove leading and trailing whitespace.
-  - `str_to_lower()`, `str_to_upper()`: convert strings to lower or upper case.
+  - `str_trim()`: remove leading/trailing whitespace.
+  - `str_to_lower()`, `str_to_upper()`: change case.
   - `str_c()`: concatenate strings.
-  - `str_remove()`, `str_remove_all()`: remove patterns from strings.
+  - `str_remove()`, `str_remove_all()`: remove patterns.
 
 ## `stringr` package examples
+
 ```{r}
 #| echo: true
 #| include: true
 library(stringr)
-# detect patterns in strings
 str_detect("Hello, world!", "world")
-# replace patterns in strings
 str_replace("Hello, world!", "world", "universe")
-# split strings based on patterns
 str_split("Hello, world!", ",")
-# extract substrings
 str_sub("Hello, world!", 3, 7)
-# remove leading and trailing whitespace
 str_trim("  Hello, world!  ")
-# remove patterns from strings
 str_remove("Hello, world!", "world")
 ```
+
+> 📝 **Task 7** — strip `"_human"` / `"_mouse"` suffixes from `c("TP53_human", "BRCA1_human", "EGFR_mouse")` using `str_remove()`
+
 ## Regular expressions : defining search patterns
+
 - Basic regex syntax:
-  - `.`: matches any character.
-  - `^`: matches the start of a string.
-  - `$`: matches the end of a string.
-  - `[]`: matches any character inside the brackets.
-  - `|`: matches either the expression before or after the pipe.
-  - `*`: matches zero or more occurrences of the preceding character.
-  - `+`: matches one or more occurrences of the preceding character.
-  - `?`: matches zero or one occurrence of the preceding character.
-  - `{n}`: matches exactly n occurrences of the preceding character.
-  - `{n,}`: matches n or more occurrences of the preceding character.
-  - `{n,m}`: matches between n and m occurrences of the preceding character.
-  - `\\`: escape character.
-  - `\\d`: matches any digit.
-  - `\\w`: matches any word character.
+  - `.`: any character; `^`: start; `$`: end
+  - `[]`: character class; `|`: alternation
+  - `*`: 0 or more; `+`: 1 or more; `?`: 0 or 1
+  - `{n}`, `{n,}`, `{n,m}`: repetition counts
+  - `\\`: escape; `\\d`: digit; `\\w`: word character
 
 ## Regular expressions examples
+
 ```{r}
 #| echo: true
 #| include: true
 # 1. Dot (.)
-# Matches any character except a newline.
-str_detect("cat", "c.t")       # TRUE: 'c' + any character ('a') + 't'
-str_detect("ct", "c.t")        # FALSE: missing a character between 'c' and 't'
+str_detect("cat", "c.t")       # TRUE
+str_detect("ct", "c.t")        # FALSE
 
 # 2. Start (^) and End ($)
-# ^ matches the start of a string, $ matches the end.
-str_detect("Hello world", "^Hello")  # TRUE: string starts with "Hello"
-str_detect("Hello world", "world$")   # TRUE: string ends with "world"
+str_detect("Hello world", "^Hello")  # TRUE
+str_detect("Hello world", "world$")  # TRUE
 
 # 3. Character Class ([])
-# Matches any single character listed inside the brackets.
-str_extract("hello", "[aeiou]")         # "e": extracts the first vowel found
+str_extract("hello", "[aeiou]")
 str_extract_all("hello", "[aeiou]")
 ```
+
 ## Regular expressions examples (cont'd)
+
 ```{r}
 #| echo: true
 #| include: true
 # 4. Alternation (|)
-# Matches either the expression before or after the pipe.
-str_detect("I like cats", "cat|dog")      # TRUE: "cat" is found
-str_detect("I like dogs", "cat|dog")      # TRUE: "dog" is found
-str_detect("I like birds", "cat|dog")     # FALSE: neither "cat" nor "dog" is found
+str_detect("I like cats", "cat|dog")    # TRUE
+str_detect("I like dogs", "cat|dog")    # TRUE
+str_detect("I like birds", "cat|dog")   # FALSE
 
 # 5. Asterisk (*)
-# Matches zero or more occurrences of the preceding element.
-str_detect("ac", "ab*c")    # TRUE: zero 'b's between 'a' and 'c'
-str_detect("abbc", "ab*c")  # TRUE: one or more 'b's between 'a' and 'c'
+str_detect("ac", "ab*c")    # TRUE
+str_detect("abbc", "ab*c")  # TRUE
+
 # 6. Plus (+)
-# Matches one or more occurrences of the preceding element.
-str_detect("abc", "ab+c")   # TRUE: one 'b' present
-str_detect("abbc", "ab+c")  # TRUE: two 'b's present
-str_detect("ac", "ab+c")    # FALSE: requires at least one 'b'
+str_detect("abc", "ab+c")   # TRUE
+str_detect("abbc", "ab+c")  # TRUE
+str_detect("ac", "ab+c")    # FALSE
 ```
+
 ## Regular expressions examples (cont'd)
+
 ```{r}
 #| echo: true
 #| include: true
-
 # 7. Question Mark (?)
-# Matches zero or one occurrence of the preceding element.
-# Example: "colou?r" matches both "color" and "colour"
 str_detect("color", "colou?r")    # TRUE
 str_detect("colour", "colou?r")   # TRUE
 
 # 8. Exact Count ({n})
-# Matches exactly n occurrences of the preceding element.
-str_detect("aaa", "a{3}")   # TRUE: exactly three 'a's
-str_detect("aa", "a{3}")    # FALSE: only two 'a's
+str_detect("aaa", "a{3}")   # TRUE
+str_detect("aa", "a{3}")    # FALSE
 
 # 9. Minimum Count ({n,})
-# Matches n or more occurrences.
-str_detect("aa", "a{2,}")    # TRUE: at least two 'a's present
-str_detect("a", "a{2,}")     # FALSE: only one 'a'
+str_detect("aa", "a{2,}")    # TRUE
+str_detect("a", "a{2,}")     # FALSE
 ```
+
 ## Regular expressions examples (cont'd)
+
 ```{r}
 #| echo: true
 #| include: true
 # 10. Range Count ({n,m})
-# Matches between n and m occurrences (inclusive).
-str_detect("aa", "a{2,4}")    # TRUE: two 'a's is within the range
-str_detect("aaaa", "a{2,4}")  # TRUE: four 'a's is within the range
-str_detect("aaaaa", "a{2,4}") # FALSE: five 'a's exceeds the range
+str_detect("aa", "a{2,4}")    # TRUE
+str_detect("aaaa", "a{2,4}")  # TRUE
+str_detect("aaaaa", "a{2,4}") # FALSE
 
 # 11. Escape Character (\\)
-# Use double backslashes to escape special characters.
-# For example, to match a literal period (.) you must escape it.
-str_detect("a.b", "a\\.b")   # TRUE: matches literal "a.b"
-str_detect("aXb", "a\\.b")   # FALSE: "X" is not a literal period
+str_detect("a.b", "a\\.b")   # TRUE
+str_detect("aXb", "a\\.b")   # FALSE
 ```
+
 ## Regular expressions examples (cont'd)
+
 ```{r}
 #| echo: true
 #| include: true
 # 12. Digit (\\d)
-# Matches any digit (0-9).
-str_extract("Order number: 12345", "\\d+")  # "12345": extracts one or more digits
+str_extract("Order number: 12345", "\\d+")
 
 # 13. Word Character (\\w)
-# Matches any word character (letters, digits, underscore).
-str_extract_all("Hello, world!", "\\w+")   # c("Hello", "world"): extracts words
+str_extract_all("Hello, world!", "\\w+")
 ```
+
 ## Testing regular expressions
 
 - Use online tools like [regex101](https://regex101.com/) to test regular expressions.
 
+> 📝 **Task 8** — use `str_detect()` to extract only AFFX control probes from
+> `c("AFFX-BioB-3_at", "Gene_1234", "AFFX-BioC-5_at", "Kinase_99")`
