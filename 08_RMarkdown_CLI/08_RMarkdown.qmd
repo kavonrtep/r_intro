@@ -80,7 +80,7 @@ including installation instructions and a comprehensive guide to all features.
 # but does not show the code or results
 library(tidyverse)
 ```
-## Simple chuck with code evalated and results shown
+## Simple chunk with code evalated and results shown
 ```{r}
 #| label: simple_chunk
 # using default options

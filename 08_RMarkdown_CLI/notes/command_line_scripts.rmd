@@ -1,0 +1,298 @@
+---
+title: "Command-Line R Scripts"
+format:
+  revealjs:
+    self-contained: true
+    slide-number: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+
+## Why Command-Line Scripts?
+
+- RStudio is great for exploration, but not for automation
+- Command-line scripts let you:
+  - Run analyses **without** opening RStudio
+  - Integrate R into **pipelines** and **workflows**
+  - Process **many files** with a single command using wildcards
+  - Schedule jobs on servers or HPC clusters
+- The same R code, but invoked from the terminal
+
+## Anatomy of a Command-Line R Script
+
+```r
+#!/usr/bin/env Rscript
+# script_name.R
+#
+# Brief description of what the script does.
+#
+# Usage:
+#   Rscript script_name.R <arg1> <arg2>
+
+# ... code below ...
+```
+
+The **shebang** line `#!/usr/bin/env Rscript` makes the script executable directly (without typing `Rscript` each time).
+
+## Making a Script Executable
+
+```bash
+# Make the script executable once
+chmod +x my_script.R
+
+# Then run it directly
+./my_script.R arg1 arg2
+
+# Or always via Rscript (no chmod needed)
+Rscript my_script.R arg1 arg2
+```
+
+Both are equivalent — `chmod +x` is just a convenience.
+
+## Approach 1: `commandArgs()`
+
+The simplest way to read arguments — built into base R:
+
+```r
+args <- commandArgs(trailingOnly = TRUE)
+
+# args is a character vector of all arguments
+input_file  <- args[1]
+output_file <- args[2]
+```
+
+Usage:
+```bash
+Rscript my_script.R data/input.fai results/output.txt
+```
+
+- `trailingOnly = TRUE` skips R's own internal arguments
+- Arguments are positional — order matters
+- No automatic help message
+
+## Example: `calculate_N50_L50.R`
+
+```r
+#!/usr/bin/env Rscript
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) < 2) {
+  stop("Usage: Rscript calculate_N50_L50.R <input.fai> <output.txt>")
+}
+
+input_file  <- args[1]
+output_file <- args[2]
+
+fai <- read.table(input_file, header = FALSE, sep = "\t")
+contig_lengths <- as.numeric(fai[[2]])
+total_length   <- sum(contig_lengths)
+
+sorted_lengths <- sort(contig_lengths, decreasing = TRUE)
+cumsum_lengths <- cumsum(sorted_lengths)
+L50 <- which(cumsum_lengths >= total_length / 2)[1]
+N50 <- sorted_lengths[L50]
+
+write.table(data.frame(Statistic = c("Total Length", "N50", "L50"),
+                       Value = c(total_length, N50, L50)),
+            file = output_file, sep = "\t", row.names = FALSE)
+```
+
+## Approach 2: `optparse` Library
+
+For scripts with multiple options, use `optparse`:
+
+- Named flags like `--input`, `--outbase`
+- Automatic `--help` message
+- Default values and type checking
+- More robust and user-friendly
+
+```r
+library(optparse)
+```
+
+## Defining Options with `optparse`
+
+```r
+option_list <- list(
+  make_option(c("--g1"), type = "character", default = NULL,
+              help = "Path to genome 1 FASTA index (.fai)"),
+  make_option(c("--g2"), type = "character", default = NULL,
+              help = "Path to genome 2 FASTA index (.fai)"),
+  make_option(c("--outbase"), type = "character", default = "output",
+              help = "Base name for output files [default: %default]")
+)
+
+opt_parser <- OptionParser(option_list = option_list)
+opt <- parse_args(opt_parser)
+```
+
+Usage:
+```bash
+./compare_assemblies.R --g1 asm1.fai --g2 asm2.fai --outbase results/compare
+```
+
+## Validating Required Arguments
+
+Always check that required inputs were provided:
+
+```r
+if (is.null(opt$g1) || is.null(opt$g2)) {
+  print_help(opt_parser)
+  stop("Both --g1 and --g2 must be provided.", call. = FALSE)
+}
+```
+
+`print_help()` prints the auto-generated help text before the error message.
+
+## Automatic Help Message
+
+Running with `--help` (or `-h`) prints usage automatically:
+
+```bash
+./compare_assemblies.R --help
+```
+
+```
+Usage: compare_assemblies.R [options]
+
+Options:
+    --g1=CHARACTER   Path to genome 1 FASTA index (.fai)
+    --g2=CHARACTER   Path to genome 2 FASTA index (.fai)
+    --outbase=CHARACTER
+                     Base name for output files [default: output]
+    -h, --help       Show this help message and exit
+```
+
+No extra code needed — `optparse` generates this for free.
+
+## Positional Arguments with `optparse`
+
+When you want to accept an arbitrary number of files (e.g., `*.fasta`):
+
+```r
+opt_parser <- OptionParser(
+  usage = "Usage: %prog [options] file1 file2 ...",
+  option_list = option_list
+)
+
+# positional_arguments = TRUE returns both options and extra args
+args <- parse_args(opt_parser, positional_arguments = TRUE)
+
+opt         <- args$options   # named options (--outbase etc.)
+input_files <- args$args      # positional file names
+```
+
+Usage:
+```bash
+./compare_assemblies.R --outbase results/ asm1.fai asm2.fai asm3.fai
+# or with a wildcard:
+./compare_assemblies.R --outbase results/ data/assemblies/*.fai
+```
+
+## `commandArgs` vs `optparse`
+
+| Feature | `commandArgs` | `optparse` |
+|---|---|---|
+| Built-in (no install) | yes | no |
+| Named flags (`--flag`) | no | yes |
+| Auto help message | no | yes |
+| Default values | manual | built-in |
+| Positional arguments | by position | supported |
+| Best for | simple scripts | production scripts |
+
+## Writing Output Files
+
+Use the `--outbase` pattern to produce multiple related outputs:
+
+```r
+outbase <- opt$outbase
+
+# Save CSV summary
+write.csv(summary_df,
+          file = paste0(outbase, "_summary.csv"),
+          row.names = FALSE)
+
+# Save PNG plot
+png(paste0(outbase, "_plot.png"), width = 800, height = 600)
+# ... plotting code ...
+dev.off()
+
+cat("Results written to", outbase, "_summary.csv and _plot.png\n")
+```
+
+## Example: `compare_assemblies.R` Overview
+
+The script `command_line_scripts/compare_assemblies.R`:
+
+1. Parses `--g1`, `--g2`, `--outbase` with `optparse`
+2. Reads two `.fai` FASTA index files
+3. Computes **N50**, **L50**, and **total length** for each
+4. Saves a CSV summary table
+5. Saves a PNG plot of cumulative contig lengths
+
+```bash
+./compare_assemblies.R \
+  --g1 data/assemblies/asm1.fasta.fai \
+  --g2 data/assemblies/asm2.fasta.fai \
+  --outbase results/comparison
+```
+
+## N50 and L50 — a Reminder
+
+Given contig lengths sorted descending: `[1000, 800, 600, 400, 200]`
+Total = 3000, 50% threshold = 1500
+
+| Contigs | Cumulative |
+|---|---|
+| 1000 | 1000 |
+| 800  | 1800 ← passes 1500 |
+
+- **N50** = 800 (length of the contig that tips the balance)
+- **L50** = 2 (number of contigs needed)
+
+Better assembly → higher N50, lower L50
+
+## Printing Progress Messages
+
+Use `cat()` or `message()` to keep users informed:
+
+```r
+cat("Reading", input_file, "...\n")
+# ... processing ...
+cat("Wrote results to", output_file, "\n")
+```
+
+`message()` prints to **stderr** (separate from stdout — useful in pipelines):
+
+```r
+message("Warning: only one contig found in ", basename(fai_file))
+```
+
+## Running Scripts from the Repo Root
+
+Scripts in this course expect to be run from the **repository root**:
+
+```bash
+# From the repo root:
+Rscript 08_RMarkdown_CLI/command_line_scripts/calculate_N50_L50.R \
+  data/assemblies/asm1.fasta.fai \
+  results/asm1_stats.txt
+```
+
+Paths like `data/assemblies/` are relative to the working directory. Running from a different location will break them.
+
+## Summary
+
+- Use `commandArgs(trailingOnly = TRUE)` for simple, positional arguments
+- Use `optparse` for named flags, defaults, and auto-generated help
+- Use `positional_arguments = TRUE` to accept variable numbers of files
+- Use `paste0(outbase, "_suffix.ext")` for output file naming
+- Always validate inputs and print helpful error messages
+- Scripts are run from the **repository root**
+
+> 📝 **Task 1** — Run `calculate_N50_L50.R` from the command line with `--help`. Inspect the usage message and run it on a provided `.fai` file.
+
+> 📝 **Task 2** — Inspect `compare_assemblies.R`. Add the `--help` flag check and run it on two `.fai` files. Examine the CSV and PNG outputs.
