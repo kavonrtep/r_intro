@@ -55,3 +55,6 @@ output_table <- data.frame(
 
 write.table(output_table, file = output_file, sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
+# Task - Make copy of this script and modify it so that
+# if output file  is not provided, print the results to the console
+# instead of writing to a file.
