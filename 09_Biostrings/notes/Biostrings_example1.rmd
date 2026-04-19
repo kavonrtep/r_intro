@@ -1,0 +1,345 @@
+---
+title: "Example 1 (fallback) — GC content around TSS, without BSgenome"
+format:
+  revealjs:
+    self-contained: true
+    slide-number: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+
+```{r setup}
+#| echo: false
+#| include: false
+library(Biostrings)
+library(BSgenome)
+library(rtracklayer)
+library(ggplot2)
+
+hs_genome     <- readDNAStringSet("../../data/seq_data/Homo_sapiens.GRCh38.dna_sm.toplevel.fa.gz")
+drerio_genome <- readDNAStringSet("../../data/seq_data/Danio_rerio.GRCz11.dna_sm.toplevel.fa.gz")
+names(hs_genome)     <- gsub(" .*", "", names(hs_genome))
+names(drerio_genome) <- gsub(" .*", "", names(drerio_genome))
+```
+
+## Downloading the genome FASTA files
+
+This version **does not need BSgenome packages** (~1.4 GB of R packages).
+Instead, it reads the genome from gzipped Ensembl FASTA files downloaded once:
+
+-   Human (GRCh38): ~1.0 GB
+-   Zebrafish (GRCz11): ~0.5 GB
+
+From the terminal, at the repository root:
+
+```bash
+cd data/seq_data
+bash get_data.sh
+```
+
+Or directly from R:
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+dir.create("data/seq_data", recursive = TRUE, showWarnings = FALSE)
+download.file(
+  "https://ftp.ensembl.org/pub/release-113/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna_sm.toplevel.fa.gz",
+  "data/seq_data/Homo_sapiens.GRCh38.dna_sm.toplevel.fa.gz")
+download.file(
+  "https://ftp.ensembl.org/pub/release-113/fasta/danio_rerio/dna/Danio_rerio.GRCz11.dna_sm.toplevel.fa.gz",
+  "data/seq_data/Danio_rerio.GRCz11.dna_sm.toplevel.fa.gz")
+```
+
+## Load libraries
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+library(Biostrings)
+library(BSgenome)      # for getSeq(); no species package needed
+library(rtracklayer)
+library(ggplot2)
+```
+
+No BSgenome species package needed — `getSeq()` also works on a plain
+`DNAStringSet` if the sequences are named.
+
+## The biological question
+
+-   Protein-coding genes in vertebrates are typically embedded in **GC-rich regions**, with the peak right at the transcription start site (TSS).
+-   That GC peak overlaps with **CpG islands** and correlates with:
+    -   open chromatin,
+    -   efficient mRNA nuclear export,
+    -   higher translation efficiency.
+-   Plan for this example:
+    1.  Extract ±1 kb windows around TSSs in **human** and **zebrafish**.
+    2.  Compute GC content in a 50 bp sliding window.
+    3.  Average across thousands of TSSs.
+    4.  Compare against the whole-genome GC baseline.
+
+## Loading genomes from FASTA
+
+`readDNAStringSet()` reads the whole (gzipped) FASTA file into a named
+`DNAStringSet` — one sequence per chromosome / contig / scaffold.
+
+Unlike BSgenome, nothing is loaded lazily — the full genome is parsed into
+memory. For human that's roughly 3 GB of decompressed sequence.
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+hsapiens_genome_path <- "data/seq_data/Homo_sapiens.GRCh38.dna_sm.toplevel.fa.gz"
+drerio_genome_path   <- "data/seq_data/Danio_rerio.GRCz11.dna_sm.toplevel.fa.gz"
+
+hs_genome     <- readDNAStringSet(hsapiens_genome_path)
+drerio_genome <- readDNAStringSet(drerio_genome_path)
+```
+
+```{r}
+#| echo: true
+#| include: true
+hs_genome
+```
+
+## Cleaning FASTA header names
+
+Ensembl FASTA headers carry extra metadata after the chromosome name:
+
+```{r}
+#| echo: true
+#| include: true
+# headers before cleaning
+head(names(readDNAStringSet("../../data/seq_data/Homo_sapiens.GRCh38.dna_sm.toplevel.fa.gz",
+                            nrec = 3)), 3)
+```
+
+`getSeq()` requires an exact match between the BED seqnames and the FASTA
+names — keep just the first word (everything before the first space):
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+names(hs_genome)     <- gsub(" .*", "", names(hs_genome))
+names(drerio_genome) <- gsub(" .*", "", names(drerio_genome))
+```
+
+```{r}
+#| echo: true
+#| include: true
+head(names(hs_genome), 5)
+```
+
+## Importing BED files with rtracklayer
+
+The TSS coordinates were pre-computed and saved as BED. Each row is a ±1 kb window centered on a TSS → width = 2001 bp.
+
+```{r}
+#| echo: true
+#| include: true
+hsapiens_bed_path <- "../../data/seq_data/tss_hs.bed"
+drerio_bed_path   <- "../../data/seq_data/tss_drerio.bed"
+
+hs_bed     <- import(hsapiens_bed_path, format = "BED")
+drerio_bed <- import(drerio_bed_path,   format = "BED")
+
+length(hs_bed)
+width(hs_bed)[1:5]
+hs_bed
+```
+
+## Seqname conventions match here
+
+In Example 2 (BSgenome) we had to prepend `"chr"` because UCSC uses
+`"chr1"`, `"chr2"`, … while the BED file uses Ensembl-style `"1"`, `"2"`, …
+
+With Ensembl FASTA we are already in the Ensembl world — **no rename needed**.
+
+```{r}
+#| echo: true
+#| include: true
+seqlevels(hs_bed) |> head()
+names(hs_genome)  |> head()
+
+all(seqlevels(hs_bed) %in% names(hs_genome))
+```
+
+## Extracting sequences with `getSeq()`
+
+`getSeq()` works on a plain `DNAStringSet` too — the set just needs named
+sequences, and the BED seqlevels must match those names. Strand is
+respected: minus-strand ranges are **reverse-complemented** automatically.
+
+```{r}
+#| echo: true
+#| include: true
+hs_sequences     <- getSeq(hs_genome,     hs_bed)
+drerio_sequences <- getSeq(drerio_genome, drerio_bed)
+
+hs_sequences
+```
+
+## `letterFrequencyInSlidingView()`
+
+For a single sequence and a window of width `W`:
+
+-   slides a window of width `W` across the sequence,
+-   returns, for each window position, the count of the requested letters.
+
+Output is a matrix with `length(seq) − W + 1` rows, one column per letter set.
+
+```{r}
+#| echo: true
+#| include: true
+n <- 5000
+x <- sapply(sample(hs_sequences, n), function(seq) {
+  letterFrequencyInSlidingView(seq, view.width = 50, letters = "GC")
+})
+dim(x)   # rows = window positions, cols = sampled TSSs
+```
+
+## Average GC profile around human TSS
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-width: 9
+#| fig-height: 5
+gc_mean_content <- rowMeans(x, na.rm = TRUE)
+plot(gc_mean_content,
+     xlab = "Window start (bp)",
+     ylab = "GC count in 50 bp window",
+     main = "Mean GC content around human TSS")
+n_windows <- length(gc_mean_content)
+abline(v = n_windows / 2, col = "red", lty = 2)
+```
+
+The peak sits right at the TSS — exactly where we expected.
+
+## A reusable profile function
+
+The same logic works for any letter set (GC, AT, CG, single bases) and any window width. Wrap it up once, reuse it everywhere.
+
+```{r}
+#| echo: true
+#| include: true
+get_N_profile <- function(s, W = 50, letters = "GC", sample_size = 5000) {
+  x <- sapply(sample(s, sample_size), function(seq) {
+    letterFrequencyInSlidingView(seq, view.width = W, letters = letters)
+  })
+  mean_content <- rowMeans(x, na.rm = TRUE)
+  mean_content / W          # normalise to a per-base proportion in [0, 1]
+}
+
+hs_gc_profile <- get_N_profile(hs_sequences,     W = 50, letters = "GC")
+dr_gc_profile <- get_N_profile(drerio_sequences, W = 50, letters = "GC")
+```
+
+> 📝 **Task 1** — compute separate A, T, G, and C profiles for the human set
+> and overlay them. Which bases drive the peak at the TSS?
+
+## Comparing species with base R
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-width: 9
+#| fig-height: 5
+plot(dr_gc_profile, type = "l", col = "blue", ylim = c(0, 1),
+     xlab = "Window start (bp)", ylab = "GC content",
+     main = "GC profile around TSS")
+points(hs_gc_profile, type = "l", col = "red")
+```
+
+## Genome-wide GC baseline
+
+Is the TSS peak really unusual? We need a reference. Without BSgenome we
+compute it across **all** sequences in the `DNAStringSet` using
+`alphabetFrequency()` plus `colSums()`.
+
+```{r}
+#| echo: true
+#| include: true
+hs_content       <- alphabetFrequency(hs_genome)
+hs_content_total <- colSums(hs_content) / sum(hs_content)
+
+dr_content       <- alphabetFrequency(drerio_genome)
+dr_content_total <- colSums(dr_content) / sum(dr_content)
+
+gc_hs_genome <- sum(hs_content_total[c("C", "G")])
+gc_dr_genome <- sum(dr_content_total[c("C", "G")])
+
+cat("Human   genome GC:", round(gc_hs_genome, 3), "\n")
+cat("Zebrafish genome GC:", round(gc_dr_genome, 3), "\n")
+```
+
+Both TSS peaks sit well above each species' own genome-wide baseline.
+
+## Baselines on the plot
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-width: 9
+#| fig-height: 5
+plot(dr_gc_profile, type = "l", col = "blue", ylim = c(0, 1),
+     xlab = "Window start (bp)", ylab = "GC content",
+     main = "GC profile around TSS (with genome baselines)")
+points(hs_gc_profile, type = "l", col = "red")
+abline(h = gc_hs_genome, col = "red",  lty = 2)
+abline(h = gc_dr_genome, col = "blue", lty = 2)
+```
+
+## The same figure with ggplot2
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-width: 9
+#| fig-height: 5
+gc_profile_df <- data.frame(
+  Position   = 1:length(hs_gc_profile),
+  GC_Content = c(hs_gc_profile, dr_gc_profile),
+  Species    = rep(c("Human", "Zebrafish"), each = length(hs_gc_profile))
+)
+
+ggplot(gc_profile_df, aes(x = Position, y = GC_Content, color = Species)) +
+  geom_line() +
+  scale_color_manual(values = c("Human" = "red", "Zebrafish" = "blue")) +
+  geom_hline(yintercept = gc_hs_genome, color = "red",  linetype = "dashed") +
+  geom_hline(yintercept = gc_dr_genome, color = "blue", linetype = "dashed") +
+  labs(title = "GC content profile around TSS",
+       subtitle = "Dashed lines: whole-genome GC baseline per species",
+       x = "Position relative to TSS (bp)",
+       y = "Mean GC content") +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+
+> 📝 **Task 2** — rescale the x-axis so the TSS sits at 0 and the axis runs
+> from roughly -1000 to +1000 bp.
+
+## Summary — and trade-off vs. BSgenome
+
+This script replicates Example 2 without BSgenome packages. Trade-offs:
+
+| Aspect | BSgenome (Example 2) | FASTA (this script) |
+|---|---|---|
+| Install cost | ~1.4 GB of R packages | None (only FASTA downloads) |
+| Download cost | Once, via BiocManager | Once, via `wget` / `download.file()` |
+| Load time | Lazy — chromosomes on demand | Eager — full genome into RAM |
+| Seqnames | UCSC (`chr1`, `chrX`, …) | Ensembl (`1`, `X`, …) |
+| Version control | Tied to Bioc release | File on disk — whatever you downloaded |
+
+For everything downstream — `getSeq()`, `letterFrequencyInSlidingView()`,
+`alphabetFrequency()`, `ggplot2` — the code is identical.
+
+Final exercise: repeat with `letters = "CG"` to build a CpG profile — expect a much sharper peak than GC.

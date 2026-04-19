@@ -1,0 +1,730 @@
+---
+title: "Biostrings, BSgenome, and Bioconductor"
+format:
+  revealjs:
+    self-contained: true
+    slide-number: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+
+```{r}
+#| echo: false
+#| include: false
+library(Biostrings)
+library(BSgenome)
+library(GenomicRanges)
+
+# Compatibility shim: pairwiseAlignment + BLOSUM/PAM were moved to the
+# pwalign package in Bioc 3.20+. Load pwalign if present; otherwise fall
+# back to Biostrings.
+if (requireNamespace("pwalign", quietly = TRUE)) {
+  library(pwalign)
+}
+load_sub_matrix <- function(name) {
+  if (requireNamespace("pwalign", quietly = TRUE)) {
+    get(name, envir = asNamespace("pwalign"))
+  } else {
+    env <- new.env()
+    data(list = name, package = "Biostrings", envir = env)
+    env[[name]]
+  }
+}
+```
+
+# Part 0 — Installation
+
+## Installing Biostrings, BSgenome, pwalign
+
+All packages come from Bioconductor via `BiocManager`:
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install(c(
+  "Biostrings",
+  "BSgenome",
+  "GenomicRanges",
+  "pwalign",                         # Bioc 3.20+ only (see next slide)
+  "BSgenome.Hsapiens.UCSC.hg38",     # optional — large (~1 GB)
+  "BSgenome.Drerio.UCSC.danRer11"    # optional
+))
+```
+
+```{r}
+#| echo: true
+#| include: true
+BiocManager::version()
+```
+
+## Heads-up — the `pwalign` split
+
+In **Bioconductor 3.20 (Oct 2024)** the `pairwiseAlignment()` function and the
+substitution-matrix data (`BLOSUM*`, `PAM*`) were moved out of Biostrings
+into a new package called **`pwalign`**.
+
+-   **Bioc ≤ 3.19** (this teaching host is 3.18): they still live in Biostrings — no extra `library()` needed.
+-   **Bioc ≥ 3.20** (classroom workstations are 3.22): install `pwalign` and `library(pwalign)` *before* calling `pairwiseAlignment()` / using `BLOSUM62`.
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+# Same code works on both versions if you guard the pwalign load:
+if (requireNamespace("pwalign", quietly = TRUE)) {
+  library(pwalign)           # Bioc >= 3.20
+}
+# On Bioc <= 3.19 nothing extra is needed.
+```
+
+---
+
+# Part 1 — Biostrings
+
+## Biostrings: Sequence Analysis in R
+
+-   High-performance classes for biological sequences:
+    -   `DNAString`, `RNAString`, `AAString`
+    -   `DNAStringSet`, `RNAStringSet`, `AAStringSet` (collections)
+-   Fast pattern matching, alignment, and frequency operations.
+-   Integrates tightly with `GenomicRanges` and `BSgenome`.
+
+## Creating a Sequence Object
+
+```{r}
+#| echo: true
+#| include: true
+dna_seq <- DNAString("ATGCGTACGTAGCTAG")
+print(dna_seq)
+
+rna_seq <- RNAString("AUGCGUACGUAGCUAG")
+print(rna_seq)
+
+rna_converted <- as(rna_seq, "RNAString")
+print(rna_converted)
+
+aa_seq <- AAString("MVLSPADKTNVKAAW")
+print(aa_seq)
+
+dna_set <- DNAStringSet(c("ATGCGTACGACAGTAGCTAG",
+                          "GATTACAAACATAAA",
+                          "TTACATGACCCTTTACATG"))
+print(dna_set)
+```
+
+> 📝 **Task 1** — build a named `DNAStringSet` with three sequences
+> (`geneA`, `geneB`, `geneC`); print the object and its `names()`.
+
+## Basic Sequence Operations
+
+-   `width()` — length of each sequence (or `nchar()` on character strings)
+-   `subseq()` — extract a subsequence
+-   `reverseComplement()` — reverse complement a DNA sequence
+
+```{r}
+#| echo: true
+#| include: true
+seq_length <- width(dna_set)
+print(seq_length)
+
+subseq_dna <- subseq(dna_set, start = 4, end = 8)
+print(subseq_dna)
+```
+
+## Reverse Complement
+
+```{r}
+#| echo: true
+#| include: true
+rev_comp_dna <- reverseComplement(dna_set)
+print(dna_set)
+print(rev_comp_dna)
+```
+
+## Translation
+
+`translate()` converts a nucleotide sequence to its protein sequence.
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+translate(x, genetic.code = GENETIC_CODE,
+          no.init.codon = FALSE, if.fuzzy.codon = "error")
+```
+
+`GENETIC_CODE` is the standard code; pass a different table for mitochondrial
+or alternative codes.
+
+```{r}
+#| echo: true
+#| include: true
+head(GENETIC_CODE, 16)
+translated_seq <- translate(dna_set)
+print(translated_seq)
+```
+
+> 📝 **Task 2** — take the reverse complement of `dna_set` and translate it.
+
+## Pattern Matching — Functions
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+# single sequence
+matchPattern(pattern, subject,
+             max.mismatch = 0, min.mismatch = 0,
+             with.indels = FALSE, fixed = TRUE, algorithm = "auto")
+countPattern(pattern, subject,
+             max.mismatch = 0, min.mismatch = 0,
+             with.indels = FALSE, fixed = TRUE, algorithm = "auto")
+
+# multiple sequences (vectorized)
+vmatchPattern(pattern, subject,
+              max.mismatch = 0, min.mismatch = 0,
+              with.indels = FALSE, fixed = TRUE, algorithm = "auto")
+vcountPattern(pattern, subject,
+              max.mismatch = 0, min.mismatch = 0,
+              with.indels = FALSE, fixed = TRUE, algorithm = "auto")
+```
+
+## Pattern Matching in a Single Sequence
+
+```{r}
+#| echo: true
+#| include: true
+pattern <- "CGTACG"
+print(dna_seq)
+
+match_result <- matchPattern(pattern, dna_seq)
+print(match_result)
+
+pattern_count <- countPattern(pattern, dna_seq)
+print(paste("Number of occurrences of", pattern, ":", pattern_count))
+```
+
+## Pattern Matching in a Set of Sequences
+
+```{r}
+#| echo: true
+#| include: true
+pattern <- "ACAT"
+print(dna_set)
+
+match_result_set <- vmatchPattern(pattern, dna_set)
+print(match_result_set)
+```
+
+## Matching with Mismatches
+
+```{r}
+#| echo: true
+#| include: true
+pattern <- "ACAT"
+dna_seq_mm <- DNAString("ACATGACATGACATGACGT")
+match_result_mm <- matchPattern(pattern, dna_seq_mm, max.mismatch = 1)
+print(match_result_mm)
+```
+
+> 📝 **Task 3** — search `dna_set` for `"GTAG"` allowing up to one mismatch;
+> how many matches are found per sequence? Hint: `vcountPattern()`.
+
+## Reading FASTA Files
+
+-   `readDNAStringSet()` / `readAAStringSet()` read sequences from FASTA.
+-   `writeXStringSet()` writes them back out.
+-   Plain text and gzipped files are handled transparently.
+
+```{r}
+#| echo: true
+#| include: true
+fasta_file_1 <- "../../data/seq_data/someORF.fa"
+fasta_file_2 <- "../../data/seq_data/dm3_upstream2000.fa.gz"
+
+dna_seq_fasta <- readDNAStringSet(fasta_file_1)
+print(dna_seq_fasta)
+
+dna_seq_fasta_gz <- readDNAStringSet(fasta_file_2)
+print(dna_seq_fasta_gz)
+```
+
+## Reading Protein FASTA
+
+```{r}
+#| echo: true
+#| include: true
+protein_fasta_file <- "../../data/seq_data/UP000000625.fasta.gz"
+protein_seq_fasta <- readAAStringSet(protein_fasta_file)
+print(protein_seq_fasta)
+```
+
+## Importing Multiple Sequence Alignments
+
+-   `readDNAMultipleAlignment()` / `readAAMultipleAlignment()`
+-   Supported formats: `"fasta"`, `"clustal"`, `"phylip"`
+
+```{r}
+#| echo: true
+#| include: true
+aln_file <- "../../data/seq_data/example_msa.fasta"
+aln <- readAAMultipleAlignment(aln_file, format = "fasta")
+print(aln)
+```
+
+## Consensus from an MSA
+
+-   `consensusMatrix()` — per-position letter counts
+-   `consensusString()` — single consensus sequence
+
+```{r}
+#| echo: true
+#| include: true
+cons_mat <- consensusMatrix(aln)
+print(cons_mat[, 1:10])
+
+consensus_seq <- consensusString(cons_mat)
+print(consensus_seq)
+```
+
+> 📝 **Task 4** — compute `consensusMatrix(aln, as.prob = TRUE)` to get
+> per-position letter *frequencies* rather than counts.
+
+## Pairwise Alignment
+
+-   `pairwiseAlignment()` aligns two sequences.
+-   Type: `"global"` (default), `"local"`, or `"overlap"`.
+
+```{r}
+#| echo: true
+#| include: true
+seq1 <- DNAString("ATGCTAGCTAG")
+seq2 <- DNAString("ATGCGGCTAG")
+
+alignment <- pairwiseAlignment(seq1, seq2)
+print(alignment)
+
+aligned_seq1 <- pattern(alignment)
+aligned_seq2 <- subject(alignment)
+print(aligned_seq1)
+print(aligned_seq2)
+print(paste("Alignment score:", score(alignment)))
+```
+
+> 📝 **Task 5** — run the same pair with `type = "local"` and compare scores.
+
+## Scoring — substitution matrices for proteins
+
+The default score penalises every mismatch equally. For proteins that is
+biologically wrong: a conservative substitution (I↔L, K↔R) should cost less
+than a disruptive one (W↔D).
+
+**BLOSUM** and **PAM** matrices encode the evolutionary probability of each
+amino-acid substitution, built from databases of real homologous proteins.
+
+```{r}
+#| echo: true
+#| include: true
+BLOSUM62 <- load_sub_matrix("BLOSUM62")
+BLOSUM45 <- load_sub_matrix("BLOSUM45")
+
+BLOSUM62[1:6, 1:6]
+```
+
+## Same pair, different scoring model
+
+Two short fragments around the heme pocket of alpha- and beta-globin:
+
+```{r}
+#| echo: true
+#| include: true
+p1 <- AAString("PADAVMGNPKVKAHGKKVLGA")
+p2 <- AAString("PKVKAHGKKVLGAFSDGLAHL")
+
+a62 <- pairwiseAlignment(p1, p2, substitutionMatrix = BLOSUM62,
+                         gapOpening = 10, gapExtension = 4)
+a45 <- pairwiseAlignment(p1, p2, substitutionMatrix = BLOSUM45,
+                         gapOpening = 10, gapExtension = 4)
+
+cat("BLOSUM62 score:", score(a62), "\n")
+cat("BLOSUM45 score:", score(a45), "\n")
+```
+
+BLOSUM45 is calibrated for **more distant** homologs, and gives a higher
+score here. **The choice of matrix is part of the biological question.**
+
+## Finding palindromes — `findPalindromes`
+
+A palindrome in DNA = a region that equals its **reverse complement**.
+Two biological flavours:
+
+-   **Restriction sites** are palindromic by design (EcoRI `GAATTC`, BamHI `GGATCC`, HindIII `AAGCTT`, …).
+-   **Hairpins / cruciforms** = two palindromic arms with a small loop in the middle — common in RNA secondary structure.
+
+## Restriction-site scan (strict palindrome)
+
+```{r}
+#| echo: true
+#| include: true
+plasmid <- DNAString("AAAGAATTCCCCGAATTCAAGGATCCCCC")
+
+res_sites <- findPalindromes(plasmid,
+                             min.armlength = 3,
+                             max.looplength = 0,
+                             max.mismatch = 0)
+res_sites
+```
+
+Two EcoRI (`GAATTC`) and one BamHI (`GGATCC`) site — found in one call.
+
+## Hairpin-style palindromes (small loop allowed)
+
+```{r}
+#| echo: true
+#| include: true
+rna_like <- DNAString("GGGAAATTTCCCAAAGGGTTTCCC")
+
+hairs <- findPalindromes(rna_like,
+                         min.armlength = 3,
+                         max.looplength = 5,
+                         max.mismatch = 0)
+hairs
+palindromeArmLength(hairs)
+```
+
+Helpers: `palindromeArmLength()`, `palindromeLeftArm()`, `palindromeRightArm()`.
+
+## Indexing XStringSet
+
+-   `[` returns an `XStringSet` (a subset — still a collection).
+-   `[[` returns an `XString` (a single unwrapped sequence).
+-   Accessing by name also works.
+
+```{r}
+#| echo: true
+#| include: true
+first_seq <- dna_set[1]
+print(first_seq)
+
+first_seq_2 <- dna_set[[1]]
+print(first_seq_2)
+
+multiple_seqs <- dna_set[1:2]
+print(multiple_seqs)
+```
+
+## Nucleotide Frequencies
+
+-   `alphabetFrequency()` — counts for every letter of the alphabet
+-   `letterFrequency()` — counts for specified letters (incl. `"GC"`)
+-   `oligonucleotideFrequency()` — k-mer counts
+
+```{r}
+#| echo: true
+#| include: true
+print(dna_seq)
+
+nucl_freq <- alphabetFrequency(dna_seq, baseOnly = TRUE)
+print(nucl_freq)
+```
+
+## Top 4-mers
+
+```{r}
+#| echo: true
+#| include: true
+oligo_freq <- oligonucleotideFrequency(dna_seq, width = 4)
+sorted_oligo_freq <- sort(oligo_freq, decreasing = TRUE)[1:10]
+print(sorted_oligo_freq)
+```
+
+> 📝 **Task 6** — compute GC content of each sequence in `dna_set` as a
+> proportion. Hint: `letterFrequency(dna_set, "GC", as.prob = TRUE)`.
+
+---
+
+# Part 2 — BSgenome
+
+## Overview of BSgenome
+
+-   Provides full **reference genomes** as Bioconductor data packages.
+-   Chromosomes stored as `DNAString` objects, loaded **lazily from disk**.
+-   Integrates directly with Biostrings (`getSeq`, `letterFrequency`, …) and
+    GenomicRanges (subset by `GRanges` intervals).
+
+## Installing BSgenome Packages
+
+Install the infrastructure:
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install("BSgenome")
+```
+
+Install specific genome packages:
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+BiocManager::install(c(
+  "BSgenome.Hsapiens.UCSC.hg38",
+  "BSgenome.Drerio.UCSC.danRer11"
+))
+```
+
+## Discovering Available Genomes
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+available.genomes() |> head(10)   # all BSgenome packages in your release
+installed.genomes()               # installed on this machine
+```
+
+## Inspecting a Genome
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+library(BSgenome.Hsapiens.UCSC.hg38)
+genome_human <- BSgenome.Hsapiens.UCSC.hg38
+
+seqnames(genome_human) |> head(10)    # chromosome names
+seqlengths(genome_human)["chr1"]      # chromosome length
+```
+
+## Basic Genome Queries
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+# Extract a 10 kb window from chr1
+chr1_10kb <- getSeq(genome_human, "chr1", 100000, 110000)
+print(chr1_10kb)
+
+# Access a whole chromosome
+chr1 <- genome_human$chr1
+print(chr1)
+
+# Inspect provenance
+metadata(genome_human)
+```
+
+## Extracting Subsequences with `getSeq()`
+
+`getSeq()` also works on a plain `DNAStringSet` with chromosome-like names — useful for quick demos without installing a full BSgenome package.
+
+```{r}
+#| echo: true
+#| include: true
+g <- DNAStringSet(c(chr1 = "ACGTACGTACGT",
+                    chr2 = "TGCACTGCA",
+                    chr3 = "GATCGATC"))
+print(g)
+
+s1 <- getSeq(g, GRanges("chr1", IRanges(1, 4)))
+print(s1)
+
+s2 <- getSeq(g, GRanges("chr2", IRanges(start = 1:4, end = 4:6)))
+print(s2)
+```
+
+## Benefits of BSgenome
+
+-   **Reproducibility** — versioned, release-tied data packages
+-   **Efficiency** — on-disk 2bit storage, lazy chromosome loading
+-   **Discoverability** — `available.genomes()`, `installed.genomes()`,
+    `getBSgenome()`
+-   **Integration** — direct compatibility with Biostrings and GenomicRanges
+
+## TxDb — Transcript Databases
+
+A **TxDb** is an on-disk SQLite store of transcript annotations:
+
+-   genes, transcripts, exons, CDS, UTRs
+
+for a given genome build. Shipped as packages — e.g.:
+
+-   `TxDb.Scerevisiae.UCSC.sacCer3.sgdGene`
+-   `TxDb.Dmelanogaster.UCSC.dm6.ensGene`
+
+Catalog: [bioconductor.org/packages/release/data/annotation/](https://bioconductor.org/packages/release/data/annotation/)
+
+## Installing and Loading a TxDb
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install("TxDb.Dmelanogaster.UCSC.dm6.ensGene")
+
+library(TxDb.Dmelanogaster.UCSC.dm6.ensGene)
+txdb <- TxDb.Dmelanogaster.UCSC.dm6.ensGene
+```
+
+## Core TxDb Extraction Functions
+
+-   `genes(txdb)` — GRanges of all genes
+-   `transcripts(txdb)` — GRanges of all transcripts (with strand)
+-   `exonsBy(txdb, by = "gene")` — GRangesList of exons per gene
+-   `intronsByTranscript(txdb, use.names = TRUE)` — introns per transcript
+-   `cdsBy(txdb, by = "tx")` — CDS per transcript
+-   `promoters(txdb, upstream = 2000, downstream = 200)` — promoter windows
+
+All return `GRanges` or `GRangesList`, which feed straight into `getSeq()` or
+overlap-based functions in `GenomicRanges`.
+
+---
+
+# Part 3 — Bioconductor: the shared infrastructure
+
+## What is Bioconductor?
+
+-   Open-source project providing R packages for **high-throughput genomic data**.
+-   Every package we used in this session — **Biostrings**, **BSgenome**, **GenomicRanges** — is part of Bioconductor.
+-   They all build on the same foundation: **S4 classes, slots, and generic methods**.
+-   Let's look at what that foundation actually is.
+
+## Everything is an S4 object
+
+The objects we've been creating are not plain lists or character vectors — they are **S4 objects** with defined classes.
+
+```{r}
+#| echo: true
+#| include: true
+class(dna_set)     # DNAStringSet
+class(aln)         # AAMultipleAlignment
+class(seq1)        # DNAString
+
+isS4(dna_set)
+isS4(aln)
+```
+
+## Slots — the internal storage
+
+S4 objects store their data in named **slots**. Peek at them with `slotNames()` — but rarely touch them directly.
+
+```{r}
+#| echo: true
+#| include: true
+slotNames(dna_set)      # internal fields of a DNAStringSet
+slotNames(aln)          # internal fields of an AAMultipleAlignment
+```
+
+Think of slots as "private fields" — the package decides the layout; you use **accessor functions** to read them.
+
+## Accessors, not `$`
+
+For S4 objects, `$` does **not** work the same way as for data frames. Use the package's accessor functions.
+
+```{r}
+#| echo: true
+#| include: true
+# Correct — use accessors
+width(dna_set)
+names(g)
+alphabet(dna_seq)
+```
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+# Wrong — does not give "width" of the set
+dna_set$width
+```
+
+Why? Accessors enforce the class contract — they keep working even if the internal slot layout changes.
+
+## Methods dispatch on class
+
+A generic function (`print`, `width`, `length`, `getSeq`, ...) runs a **different method** depending on the class of its argument.
+
+```{r}
+#| echo: true
+#| include: true
+head(methods(class = "DNAStringSet"), 10)
+head(methods(class = "MultipleAlignment"), 10)
+```
+
+```{r}
+#| echo: true
+#| include: true
+length(dna_set)    # number of sequences in the set
+length(dna_seq)    # number of characters in the one sequence
+
+width(dna_set)     # length of each sequence in the set
+```
+
+Same verb, different meaning per class. (`width()` is defined for the *set*, not for a single `DNAString`.)
+
+## Generic functions across packages
+
+One verb works across many classes, even across **different packages**. That is what lets Bioconductor compose:
+
+```{r}
+#| echo: true
+#| include: true
+# On a plain DNAStringSet with "chromosome" names:
+getSeq(g, GRanges("chr1", IRanges(1, 4)))
+```
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+# Same call pattern on a BSgenome object:
+getSeq(BSgenome.Hsapiens.UCSC.hg38, "chr1", 100000, 110000)
+
+# Or on an indexed FASTA (FaFile):
+getSeq(FaFile("genome.fa"), GRanges("chr1", IRanges(1, 1000)))
+```
+
+## Finding help and vignettes
+
+How to keep learning after the course ends:
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+?DNAStringSet               # help page for a class
+methods("translate")        # every class translate() dispatches on
+showMethods("getSeq")       # signatures of an S4 generic
+
+vignette(package = "Biostrings")   # list a package's vignettes
+browseVignettes("Biostrings")      # open them in a browser
+```
+
+**Vignettes** are worked-example tutorials — usually the fastest way to learn a new Bioconductor package.
+
+## Summary
+
+-   **Biostrings** — sequences: creation, manipulation, patterns, alignment, frequencies.
+-   **BSgenome** — full reference genomes, reproducible and lazily loaded.
+-   **TxDb** — transcript-level annotations, bridging sequences and gene models.
+-   **Bioconductor** — the shared S4 infrastructure (classes, slots, generic methods) that makes all of these packages compose.
+
+Further reading:
+
+-   [Bioconductor](https://bioconductor.org/)
+-   [Biostrings vignettes](https://bioconductor.org/packages/release/bioc/html/Biostrings.html)
+-   [BSgenome vignettes](https://bioconductor.org/packages/release/bioc/html/BSgenome.html)

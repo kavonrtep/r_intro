@@ -1,0 +1,318 @@
+---
+title: "Example 2 — GC content around transcription start sites"
+format:
+  revealjs:
+    self-contained: true
+    slide-number: true
+editor: visual
+---
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
+
+```{r setup}
+#| echo: false
+#| include: false
+library(Biostrings)
+library(BSgenome)
+library(rtracklayer)
+library(BSgenome.Hsapiens.UCSC.hg38)
+library(BSgenome.Drerio.UCSC.danRer11)
+library(ggplot2)
+```
+
+## Installing the genome packages
+
+Both BSgenome packages are ~500–900 MB and distributed via Bioconductor.
+They are usually pre-installed on classroom workstations — if not, install
+them once with `BiocManager`:
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+BiocManager::install(c(
+  "BSgenome.Hsapiens.UCSC.hg38",     # human, ~900 MB
+  "BSgenome.Drerio.UCSC.danRer11",   # zebrafish, ~450 MB
+  "rtracklayer"                      # BED import
+))
+```
+
+Check what's already installed:
+
+```{r}
+#| echo: true
+#| include: true
+requireNamespace("BSgenome.Hsapiens.UCSC.hg38", quietly = TRUE)
+```
+
+## Load libraries
+
+```{r}
+#| eval: false
+#| echo: true
+#| include: true
+library(Biostrings)
+library(BSgenome)
+library(rtracklayer)
+library(BSgenome.Hsapiens.UCSC.hg38)
+library(BSgenome.Drerio.UCSC.danRer11)
+library(ggplot2)
+```
+
+## The biological question
+
+-   Protein-coding genes in vertebrates are typically embedded in **GC-rich regions**, with the peak right at the transcription start site (TSS).
+-   That GC peak overlaps with **CpG islands** and correlates with:
+    -   open chromatin,
+    -   efficient mRNA nuclear export,
+    -   higher translation efficiency.
+-   Plan for this example:
+    1.  Extract ±1 kb windows around TSSs in **human** and **zebrafish**.
+    2.  Compute GC content in a 50 bp sliding window.
+    3.  Average across thousands of TSSs.
+    4.  Compare against the chromosome-wide GC baseline.
+
+## Loading genomes as BSgenome objects
+
+Unlike Example 1, we use **precompiled BSgenome packages** here — no FASTA parsing, no re-downloading, chromosomes loaded lazily from disk.
+
+```{r}
+#| echo: true
+#| include: true
+BSgenome.Hsapiens.UCSC.hg38
+```
+
+## Peeking at the genome object
+
+```{r}
+#| echo: true
+#| include: true
+seqnames(BSgenome.Hsapiens.UCSC.hg38) |> head()
+seqlengths(BSgenome.Hsapiens.UCSC.hg38)["chr1"]
+```
+
+-   A BSgenome behaves like a **named collection of chromosomes**.
+-   Chromosome sequences are read from disk only when accessed — large
+    genomes take very little RAM until you actually touch them.
+
+## Importing BED files with rtracklayer
+
+The TSS coordinates were pre-computed and saved as BED. Each row is a ±1 kb window centered on a TSS → width = 2001 bp.
+
+```{r}
+#| echo: true
+#| include: true
+hsapiens_bed_path <- "../../data/seq_data/tss_hs.bed"
+drerio_bed_path   <- "../../data/seq_data/tss_drerio.bed"
+
+hs_bed     <- import(hsapiens_bed_path, format = "BED")
+drerio_bed <- import(drerio_bed_path,   format = "BED")
+
+length(hs_bed)
+width(hs_bed)[1:5]
+hs_bed
+```
+
+## Aligning seqnames — the "chr" prefix problem
+
+A very common pitfall:
+
+-   BED / Ensembl style → `"1"`, `"2"`, `"X"`, `"Y"`
+-   UCSC / BSgenome style → `"chr1"`, `"chr2"`, `"chrX"`, `"chrY"`
+
+`getSeq()` fails or returns nothing when the names don't match **exactly**.
+
+```{r}
+#| echo: true
+#| include: true
+seqlevels(hs_bed) |> head()
+seqlevels(BSgenome.Hsapiens.UCSC.hg38) |> head()
+```
+
+## Fixing the seqnames
+
+```{r}
+#| echo: true
+#| include: true
+seqlevels(hs_bed)     <- paste0("chr", seqlevels(hs_bed))
+seqlevels(drerio_bed) <- paste0("chr", seqlevels(drerio_bed))
+
+seqlevels(hs_bed) |> head()
+```
+
+Now both objects use the same naming convention — `getSeq()` will work.
+
+## Extracting sequences with `getSeq()`
+
+`getSeq(genome, ranges)` returns a `DNAStringSet`, one sequence per range.
+Strand is respected — minus-strand ranges are **reverse-complemented** automatically.
+
+```{r}
+#| echo: true
+#| include: true
+hs_sequences     <- getSeq(BSgenome.Hsapiens.UCSC.hg38, hs_bed)
+drerio_sequences <- getSeq(BSgenome.Drerio.UCSC.danRer11, drerio_bed)
+
+hs_sequences
+```
+
+## `letterFrequencyInSlidingView()`
+
+For a single sequence and a window of width `W`:
+
+-   slides a window of width `W` across the sequence,
+-   returns, for each window position, the count of the requested letters.
+
+Output is a matrix with `length(seq) − W + 1` rows, one column per letter set.
+
+```{r}
+#| echo: true
+#| include: true
+n <- 5000
+x <- sapply(sample(hs_sequences, n), function(seq) {
+  letterFrequencyInSlidingView(seq, view.width = 50, letters = "GC")
+})
+dim(x)   # rows = window positions, cols = sampled TSSs
+```
+
+## Average GC profile around human TSS
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-width: 9
+#| fig-height: 5
+gc_mean_content <- rowMeans(x, na.rm = TRUE)
+plot(gc_mean_content,
+     xlab = "Window start (bp)",
+     ylab = "GC count in 50 bp window",
+     main = "Mean GC content around human TSS")
+n_windows <- length(gc_mean_content)
+abline(v = n_windows / 2, col = "red", lty = 2)
+```
+
+The peak sits right at the TSS — exactly where we expected.
+
+## A reusable profile function
+
+The same logic works for any letter set (GC, AT, CG, single bases) and any window width. Wrap it up once, reuse it everywhere.
+
+```{r}
+#| echo: true
+#| include: true
+get_N_profile <- function(s, W = 50, letters = "GC", sample_size = 5000) {
+  x <- sapply(sample(s, sample_size), function(seq) {
+    letterFrequencyInSlidingView(seq, view.width = W, letters = letters)
+  })
+  mean_content <- rowMeans(x, na.rm = TRUE)
+  mean_content / W          # normalise to a per-base proportion in [0, 1]
+}
+
+hs_gc_profile <- get_N_profile(hs_sequences,     W = 50, letters = "GC")
+dr_gc_profile <- get_N_profile(drerio_sequences, W = 50, letters = "GC")
+```
+
+> 📝 **Task 1** — compute separate A, T, G, and C profiles for the human set
+> and overlay them. Which bases drive the peak at the TSS?
+
+## Comparing species with base R
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-width: 9
+#| fig-height: 5
+plot(dr_gc_profile, type = "l", col = "blue", ylim = c(0, 1),
+     xlab = "Window start (bp)", ylab = "GC content",
+     main = "GC profile around TSS")
+points(hs_gc_profile, type = "l", col = "red")
+```
+
+## Genome-wide GC baseline
+
+Is the TSS peak really unusual? We need a reference — the chromosome-wide GC content, measured once on chr1 of each species.
+
+```{r}
+#| echo: true
+#| include: true
+gc_hs_chr1 <- letterFrequency(BSgenome.Hsapiens.UCSC.hg38$chr1,
+                              letters = "GC", as.prob = TRUE)
+gc_dr_chr1 <- letterFrequency(BSgenome.Drerio.UCSC.danRer11$chr1,
+                              letters = "GC", as.prob = TRUE)
+
+cat("Human   chr1 GC:", round(gc_hs_chr1, 3), "\n")
+cat("Zebrafish chr1 GC:", round(gc_dr_chr1, 3), "\n")
+```
+
+Both TSS peaks sit well above each species' own genome-wide baseline.
+
+## Baselines on the plot
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-width: 9
+#| fig-height: 5
+plot(dr_gc_profile, type = "l", col = "blue", ylim = c(0, 1),
+     xlab = "Window start (bp)", ylab = "GC content",
+     main = "GC profile around TSS (with chr1 baselines)")
+points(hs_gc_profile, type = "l", col = "red")
+abline(h = gc_hs_chr1, col = "red",  lty = 2)
+abline(h = gc_dr_chr1, col = "blue", lty = 2)
+```
+
+## The same figure with ggplot2 — code
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: true
+#| fig-show: hide
+gc_profile_df <- data.frame(
+  Position   = 1:length(hs_gc_profile),
+  GC_Content = c(hs_gc_profile, dr_gc_profile),
+  Species    = rep(c("Human", "Zebrafish"), each = length(hs_gc_profile))
+)
+
+p <- ggplot(gc_profile_df, aes(x = Position, y = GC_Content, color = Species)) +
+  geom_line() +
+  scale_color_manual(values = c("Human" = "red", "Zebrafish" = "blue")) +
+  geom_hline(yintercept = gc_hs_chr1, color = "red",  linetype = "dashed") +
+  geom_hline(yintercept = gc_dr_chr1, color = "blue", linetype = "dashed") +
+  labs(title = "GC content profile around TSS",
+       subtitle = "Dashed lines: chromosome-1 GC baseline per species",
+       x = "Position relative to TSS (bp)",
+       y = "Mean GC content") +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+
+## The same figure with ggplot2 — plot
+
+```{r}
+#| echo: false
+#| include: true
+#| fig-width: 11
+#| fig-height: 6
+print(p)
+```
+
+> 📝 **Task 2** — rescale the x-axis so the TSS sits at 0 and the axis runs
+> from roughly -1000 to +1000 bp.
+
+## Summary
+
+-   **BSgenome packages** make whole genomes available as lazily-loaded R objects.
+-   **`import()`** from rtracklayer reads BED / GFF / BigWig into `GRanges`.
+-   Seqname conventions differ — always align them before `getSeq()`.
+-   **`getSeq()`** extracts sequences by `GRanges`, respecting strand.
+-   **`letterFrequencyInSlidingView()`** computes per-position letter counts along a sequence.
+-   Wrapping the pipeline into a function (`get_N_profile()`) makes the same analysis reusable for any letter set, window, and species.
+
+Final exercise: repeat with `letters = "CG"` to build a CpG profile — expect a much sharper peak than GC.
