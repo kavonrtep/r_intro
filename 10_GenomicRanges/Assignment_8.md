@@ -70,6 +70,58 @@ library(BSgenome.Drerio.UCSC.danRer11)
 library(Gviz)
 ```
 
+Paste in the `plotGenomicTracks()` helper from the lesson — you'll use it
+in Tasks 2 and 7:
+
+```r
+plotGenomicTracks <- function(tracks_list,
+                              colors     = NULL,
+                              chromosome = NULL,
+                              from       = NULL,
+                              to         = NULL) {
+  n <- length(tracks_list)
+  if (is.null(names(tracks_list)) || any(names(tracks_list) == "")) {
+    stop("tracks_list must be a named list (names used as track titles).")
+  }
+  if (!is.null(colors) && length(colors) != n) {
+    stop("If colors is provided, its length must equal number of tracks.")
+  }
+  if (is.null(colors)) colors <- rep("gray", n)
+
+  annotation_tracks <- mapply(function(gr, col, nm) {
+    args <- list(range = gr, name = nm, fill = col,
+                 col = "black", stacking = "dense")
+    if ("id" %in% names(mcols(gr))) {
+      ids <- mcols(gr)$id
+      if (!all(is.na(ids)) && length(ids) == length(gr)) {
+        args$showFeatureId     <- TRUE
+        args$featureAnnotation <- "id"
+        args$fontcolor.feature <- "black"
+      }
+    }
+    do.call(AnnotationTrack, args)
+  },
+  gr = tracks_list, col = colors, nm = names(tracks_list),
+  SIMPLIFY = FALSE)
+
+  axis_track <- GenomeAxisTrack()
+  all_tracks <- c(list(axis_track), annotation_tracks)
+  plotTracks(all_tracks,
+             chromosome       = chromosome,
+             from             = from,
+             to               = to,
+             background.panel = "#FFFEDB",
+             col.axis         = "black",
+             cex.title        = 0.8,
+             extend.left      = 5,
+             extend.right     = 5)
+  invisible(annotation_tracks)
+}
+```
+
+Call it with a *named* list of GRanges — names become track titles. Set
+`chromosome`, `from`, and `to` to control the plotted window.
+
 The data files for this assignment live in the same folder:
 
 | File | Content |
@@ -298,8 +350,5 @@ analysis or pathway enrichment.
 ## What to submit
 
 Submit a single R script named
-**`lastname_firstname_genomicranges_assignment.R`** that:
-
-- runs end-to-end on the supplied data files,
-- prints the answers to each task (counts, tables, top hits),
-- saves the three figures from Tasks 2 / 5 / 7 to `work_dir/` as PNG files.
+- **`lastname_firstname_genomicranges_assignment.R`** that:
+- Figures as PNGs
