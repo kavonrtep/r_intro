@@ -1,63 +1,31 @@
 ---
-title: "GenomicRanges : Bioconductor Package for Genomic Data"
+title: "GenomicRanges: Bioconductor Package for Genomic Data"
 format:
-  html:
+  revealjs:
     self-contained: true
-    toc: true
-    toc-location: left
-    toc-depth: 4
-
+    slide-number: true
+editor: visual
 ---
 
-# Introduction to GenomicRanges
+<style>
+.reveal {
+  font-size: 160%;
+}
+</style>
 
-## What are genomic ranges?
-
-Genomic ranges represent intervals or regions in a genome, defined by:
-- A sequence name (chromosome or contig)
-- Start and end positions
-- Strand information (+ for forward, - for reverse, * for unstranded)
-- Additional metadata (e.g., gene names, scores, etc.)
-
-These ranges can represent various genomic features such as genes, exons, transcripts, binding sites, variants, or any other region of interest in a genome.
-
-## Core classes in GenomicRanges
-
-The GenomicRanges package provides three main classes:
-
-1. **GRanges**: Represents a collection of genomic ranges, each with a single start and end location
-2. **GRangesList**: Represents groups of genomic ranges, useful for features with hierarchical relationships (e.g., exons grouped by transcript)
-3. **GPos**: Represents genomic positions (single points rather than ranges)
-
-## Relationship with Biostrings
-
-While Biostrings handles sequence data (DNA, RNA, protein sequences), GenomicRanges handles genomic coordinates and intervals. The integration between these packages allows you to:
-- Extract sequences from specific genomic coordinates
-- Analyze sequence content within genomic ranges
-- Connect sequence features with genomic annotations
-
-
-
-# Basic GenomicRanges Operations
-
-## Loading the GenomicRanges Package
 ```{r}
 #| echo: false
 #| include: false
-#| results: hide
-#| message: false
-# Load the GenomicRanges package
 library(GenomicRanges)
 library(Biostrings)
 library(Gviz)
-library(trackViewer)
 
+# Helper used throughout the lesson — explained on its own slide below.
 plotGenomicTracks <- function(tracks_list,
                               colors     = NULL,
                               chromosome = NULL,
                               from       = NULL,
                               to         = NULL) {
-  # Validate inputs
   n <- length(tracks_list)
   if (is.null(names(tracks_list)) || any(names(tracks_list) == "")) {
     stop("tracks_list must be a named list (names used as track titles).")
@@ -65,402 +33,582 @@ plotGenomicTracks <- function(tracks_list,
   if (!is.null(colors) && length(colors) != n) {
     stop("If colors is provided, its length must equal number of tracks.")
   }
+  if (is.null(colors)) colors <- rep("gray", n)
 
-  # Default colors to gray
-  if (is.null(colors)) {
-    colors <- rep("gray", n)
-  }
-
-  # Build AnnotationTrack for each element, adding feature IDs only if defined
   annotation_tracks <- mapply(function(gr, col, nm) {
-    # Prepare base arguments
-    args <- list(
-      range    = gr,
-      name     = nm,
-      fill     = col,
-      col      = "black",      # border color
-      stacking = "dense"       # compact stacking
-    )
-    # Add feature IDs if 'id' metadata column exists and is non-empty
+    args <- list(range = gr, name = nm, fill = col,
+                 col = "black", stacking = "dense")
     if ("id" %in% names(mcols(gr))) {
       ids <- mcols(gr)$id
       if (!all(is.na(ids)) && length(ids) == length(gr)) {
         args$showFeatureId     <- TRUE
         args$featureAnnotation <- "id"
-        # Optionally customize label appearance
         args$fontcolor.feature <- "black"
       }
     }
     do.call(AnnotationTrack, args)
   },
-  gr  = tracks_list,
-  col = colors,
-  nm  = names(tracks_list),
+  gr = tracks_list, col = colors, nm = names(tracks_list),
   SIMPLIFY = FALSE)
 
-  # Add genome axis
   axis_track <- GenomeAxisTrack()
-
-  # Combine and plot
   all_tracks <- c(list(axis_track), annotation_tracks)
   plotTracks(all_tracks,
              chromosome       = chromosome,
              from             = from,
              to               = to,
-             background.panel = "#FFFEDB",    # subtle background
+             background.panel = "#FFFEDB",
              col.axis         = "black",
              cex.title        = 0.8,
              extend.left      = 5,
              extend.right     = 5)
-
   invisible(annotation_tracks)
 }
-
-
 ```
 
-## Creating GRanges Objects
+# Part 1 — What are genomic ranges?
+
+## What are genomic ranges?
+
+A genomic range = an interval on a genome.
+
+It is defined by:
+
+-   **seqname** — chromosome or contig (e.g. `"chr1"`)
+-   **start / end** — 1-based, end-inclusive
+-   **strand** — `+`, `-`, or `*`
+-   optional **metadata** — gene name, score, GC, ...
+
+Used for: genes, exons, peaks, variants, primer hits.
+
+## Core classes in GenomicRanges
+
+-   **`GRanges`** — a vector of intervals (the workhorse).
+-   **`GRangesList`** — a list of GRanges (e.g., exons grouped by transcript).
+-   **`GPos`** — single-position version (rarely used here).
+
+## Relationship with Biostrings
+
+-   `Biostrings` handles **sequence content** (DNAStringSet, ...).
+-   `GenomicRanges` handles **coordinates**.
+-   Together: extract the DNA at an interval, count GC, scan for motifs.
+
+# Part 2 — Plotting ranges
+
+## Why plot ranges?
+
+Range operations are easier to **see** than to read off a printed table.
+
+Throughout this lesson we use a helper, `plotGenomicTracks()`, that wraps
+**Gviz** — Bioconductor's track-plotting package. We will build on Gviz
+in later lessons, so it is worth meeting it here.
+
+## The `plotGenomicTracks()` helper
 
 ```{r}
 #| echo: true
 #| include: true
-# Create a simple GRanges object
+#| eval: false
+plotGenomicTracks <- function(tracks_list, colors = NULL,
+                              chromosome = NULL,
+                              from = NULL, to = NULL) {
+  n <- length(tracks_list)
+  if (is.null(colors)) colors <- rep("gray", n)
+  annotation_tracks <- mapply(function(gr, col, nm) {
+    args <- list(range = gr, name = nm, fill = col,
+                 col = "black", stacking = "dense")
+    if ("id" %in% names(mcols(gr))) {
+      args$showFeatureId     <- TRUE
+      args$featureAnnotation <- "id"
+    }
+    do.call(AnnotationTrack, args)
+  }, gr = tracks_list, col = colors, nm = names(tracks_list),
+     SIMPLIFY = FALSE)
+  plotTracks(c(list(GenomeAxisTrack()), annotation_tracks),
+             chromosome = chromosome, from = from, to = to,
+             background.panel = "#FFFEDB", cex.title = 0.8)
+}
+```
+
+Each named GRanges becomes one Gviz `AnnotationTrack`.
+
+## How to call `plotGenomicTracks()`
+
+-   **Input** — a *named* list of `GRanges` objects.
+    -   Names → track titles (left side of plot).
+-   **Output** — a Gviz multi-track figure with a genome axis on top.
+-   Add an `id` metadata column to label individual intervals.
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
+plotGenomicTracks(list(gr1 = gr1, gr2 = gr2))
+```
+
+## Trying `plotGenomicTracks()`
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2.5
+demo <- GRanges("chr1",
+                IRanges(start = c(5, 30, 60), end = c(20, 45, 80)),
+                strand = c("+", "-", "*"),
+                id = c("a", "b", "c"))
+plotGenomicTracks(list(demo = demo))
+```
+
+# Part 3 — Creating and inspecting GRanges
+
+## Creating a GRanges object
+
+```{r}
+#| echo: true
+#| include: true
 gr <- GRanges(
   seqnames = c("chr1", "chr2", "chr2", "chr1", "chr3"),
-  ranges = IRanges(start = c(10, 15, 20, 25, 30), end = c(20, 25, 30, 35, 40)),
-  strand = c("+", "-", "+", "*", "-"),
-  score = c(5, 10, 15, 20, 25),
-  GC = c(0.45, 0.55, 0.60, 0.70, 0.80)
+  ranges   = IRanges(start = c(10, 15, 20, 25, 30),
+                     end   = c(20, 25, 30, 35, 40)),
+  strand   = c("+", "-", "+", "*", "-"),
+  score    = c(5, 10, 15, 20, 25),
+  GC       = c(0.45, 0.55, 0.60, 0.70, 0.80)
 )
-
-# Display the GRanges object
 gr
-
-# Examine the structure
-str(gr)
 ```
 
-The output will show a GRanges object with 5 ranges and 2 metadata columns (score and GC). The genomic coordinates (seqnames, ranges, and strand) are displayed on the left, and the metadata columns are on the right.
+## Visualizing our GRanges
 
-## Accessing GRanges Components
+Gviz draws one chromosome at a time — show only the chr1 ranges.
 
 ```{r}
 #| echo: true
 #| include: true
-# Access the sequence names (chromosomes)
+#| fig-height: 2.5
+plotGenomicTracks(list(gr_chr1 = gr[seqnames(gr) == "chr1"]))
+```
+
+## Accessing GRanges components
+
+```{r}
+#| echo: true
+#| include: true
 seqnames(gr)
-
-# Access the ranges (start and end positions)
-ranges(gr)
-
-# Access the strand information
 strand(gr)
-
-# Access metadata columns
-mcols(gr)
-
-# Access a specific metadata column
 gr$score
-
-# Get the width of each range
 width(gr)
-
-# Get the number of ranges
 length(gr)
 ```
 
-## Subsetting GRanges Objects
+> 📝 **Task 1** — create a GRanges of three intervals on `"chr1"` with strands
+> of your choice and a metadata column `name`. Print and plot it.
+
+# Part 4 — Subsetting GRanges
+
+## Subsetting GRanges
 
 ```{r}
 #| echo: true
 #| include: true
-# Subset by index
-gr[1:3]
-
-# Subset by logical vector
-gr[width(gr) > 10]
-
-# Subset by chromosome
-gr[seqnames(gr) == "chr1"]
-
-# Subset by strand
-gr[strand(gr) == "+"]
-
-# Subset by metadata
-gr[gr$score > 10]
-
-# Subset by multiple conditions
-gr[seqnames(gr) == "chr2" & strand(gr) == "+"]
+gr[1:3]                                          # by index
+gr[width(gr) > 10]                               # by width
+gr[seqnames(gr) == "chr1"]                       # by chromosome
+```
+## Subsetting GRanges
+```{r}
+#| echo: true
+#| include: true
+gr[strand(gr) == "+"]                            # by strand
+gr[gr$score > 10]                                # by metadata
+gr[seqnames(gr) == "chr2" & strand(gr) == "+"]   # combined
 ```
 
-## Basic Range Operations
+> 📝 **Task 2** — from `gr`, keep only ranges on chr1 OR chr2 with
+> `score >= 10`. How many ranges remain?
+
+# Part 5 — Basic range operations
+
+## A toy GRanges to play with
 
 ```{r}
 #| echo: true
 #| include: true
-# Shift ranges by 5 base pairs  (--> start + 5, end + 5)
-shift(gr, 5)
-plotGenomicTracks(list(gr=gr, shifted=shift(gr, 5)))
-
-
-# Resize ranges to a width of 10 bp (start is unchanged - default)
-resize(gr, width = 10)
-plotGenomicTracks(list(gr=gr, resized=resize(gr, width = 10)))
-
-# Resize ranges to a width of 10 bp, anchoring at the start
-resize(gr, width = 10, fix = "start")
-plotGenomicTracks(list(gr=gr, resized=resize(gr, width = 10, fix = "start")))
-
-# Resize ranges to a width of 10 bp, anchoring at the end
-resize(gr, width = 10, fix = "end")
-plotGenomicTracks(list(gr=gr, resized=resize(gr, width = 10, fix = "end")))
-
-# Narrow ranges by trimming from both ends
-narrow(gr, start = 2, end = -2)
-plotGenomicTracks(list(gr=gr, narrow=narrow(gr, start = 2, end = -2)))
-
-# Expand ranges by 5 bp on each side of the start coordinate
-flank(gr, width = 5, both = TRUE)
-plotGenomicTracks(list(gr=gr, expanded=flank(gr, width = 5, both = TRUE)))
-
-# Get the 5' flanking region
-flank(gr, width = 5, start = TRUE)
-plotGenomicTracks(list(gr=gr, five_prime_flank=flank(gr, width = 5, start = TRUE)))
-
-# Get the 3' flanking region
-flank(gr, width = 5, start = FALSE)
-plotGenomicTracks(list(gr=gr, three_prime_flank=flank(gr, width = 5, start = FALSE)))
-
-# Restrict ranges to a specific region (e.g., positions 15 to 30)
-restrict(gr, start = 15, end = 30)
-plotGenomicTracks(list(gr=gr, restricted=restrict(gr, start = 15, end = 30)))
+g <- GRanges("chr1",
+             IRanges(start = c(10, 30, 60), end = c(20, 45, 75)),
+             strand = c("+", "-", "+"))
 ```
 
-# Interval Operations
+We will visualize each range operation against this same `g`.
 
-
-## Finding Overlaps Between Ranges
-The **GenomicRanges**  package provides efficient containers and methods for representing and manipulating genomic intervals, with a focus on overlap operations that are foundational in many bioinformatics analyses. Overlap‐finding functions return a **Hits**  object that encodes the relationships between two sets of ranges, enabling you to extract matching indices, count overlaps, and subset ranges based on their overlap patterns. Key functions include:
-
-- **`findOverlaps()`** : identifies all overlapping pairs between two `GRanges` objects.
-- **`queryHits()`**  / `subjectHits()`** : extract the query and subject indices from a `Hits` object, respectively.
-- **`countOverlaps()`** : for each range in one set, counts how many ranges in the other set overlap it.
-- **`subsetByOverlaps()`** : returns the subset of ranges that overlap any range in another set.
-- **`overlapsAny()`** : a logical vector indicating which ranges have at least one overlap in the other set.
+## `shift()` — move every range
 
 ```{r}
 #| echo: true
 #| include: true
-# Create a second GRanges object
-gr1 <- GRanges("chr1", IRanges(c(5, 80, 329), width=20), id=1:3)
-gr2 <- GRanges("chr1", IRanges(c(10, 100, 300), width=15), id=1:3)
-plotGenomicTracks(list(gr1=gr1, gr2=gr2))
+#| fig-height: 2.5
+plotGenomicTracks(list(original = g, shifted = shift(g, 5)))
+```
 
-# Find all overlapping pairs
+## `resize()` — fixed width, choose anchor
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 3.5
+plotGenomicTracks(list(
+  original     = g,
+  resize_start = resize(g, width = 10, fix = "start"),
+  resize_end   = resize(g, width = 10, fix = "end")
+))
+```
+
+`fix` controls what stays put: `"start"`, `"end"`, or `"center"`.
+
+## `narrow()` — trim from either end
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2.5
+plotGenomicTracks(list(original = g,
+                 narrow   = narrow(g, start = 2, end = -2)))
+```
+
+`start = 2` drops 1 bp from the start; `end = -2` drops 1 bp from the end.
+
+## `flank()` — adjacent windows
+
+Useful for promoters (5′ flank) and 3′ UTRs.
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 3.5
+plotGenomicTracks(list(
+  original     = g,
+  flank_5prime = flank(g, width = 5, start = TRUE),
+  flank_3prime = flank(g, width = 5, start = FALSE)
+))
+```
+
+## `restrict()` — clip to a window
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2.5
+plotGenomicTracks(list(original   = g,
+                 restricted = restrict(g, start = 15, end = 50)))
+```
+
+> 📝 **Task 3** — build a GRanges of 3 "genes" on chr1, then extract a
+> **200 bp promoter** for each (use `flank()` with `start = TRUE`). Plot
+> both tracks together.
+
+# Part 6 — Finding overlaps
+
+## Why overlap operations?
+
+The single most common operation in genomics:
+
+-   *"Which of my peaks fall inside a gene?"*
+-   *"Which variants hit an exon?"*
+-   *"How many reads cover this region?"*
+
+All use the same overlap machinery.
+
+## `findOverlaps()`
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2
+gr1 <- GRanges("chr1", IRanges(start = c(5, 80, 130), width = 20))
+gr2 <- GRanges("chr1", IRanges(start = c(10, 100, 125), width = 15))
+plotGenomicTracks(list(gr1 = gr1, gr2 = gr2))
+```
+
+```{r}
+#| echo: true
+#| include: true
 hits <- findOverlaps(gr1, gr2)
 hits
-# Once you have a **Hits**  object, `queryHits(hits)` returns the indices in
-# the **query**  (`gr1`) and `subjectHits(hits)` returns the indices in
-# the **subject**  (`gr2`) for each overlapping pair
-# Indices of overlapping ranges
-q_idx <- queryHits(hits)    # c(1, 3)
-s_idx <- subjectHits(hits)  # c(1, 3)
+```
 
-# Access the actual ranges
-gr1[q_idx]
-gr2[s_idx]
+## Reading a `Hits` object
 
-# Count overlaps of gr1 against gr2
-counts <- countOverlaps(gr1, gr2)
-counts
+```{r}
+#| echo: true
+#| include: true
+queryHits(hits)     # indices into gr1
+subjectHits(hits)   # indices into gr2
+```
 
+Each pair `(queryHits[i], subjectHits[i])` is one overlapping pair.
+
+## `countOverlaps()`
+
+```{r}
+#| echo: true
+#| include: true
+countOverlaps(gr1, gr2)
+```
+
+For each range in `gr1`, how many ranges in `gr2` it overlaps.
+
+## `subsetByOverlaps()`
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 3
 gr1_overlapping <- subsetByOverlaps(gr1, gr2)
-gr1_overlapping
-plotGenomicTracks(list(gr1=gr1, gr2=gr2, gr1_overlapping=gr1_overlapping))
-
-# pairwise overlap comparison
-has_overlap <- overlapsAny(gr1, gr2)
-has_overlap
-plotGenomicTracks(list(gr1=gr1, gr2=gr2))
-
-
-
+plotGenomicTracks(list(gr1 = gr1, gr2 = gr2,
+                 gr1_overlapping = gr1_overlapping))
 ```
 
-## Nearest Neighbor Operations
-
-Nearest‐neighbor operations in the **GenomicRanges**  package allow you to query the closest or adjacent genomic intervals between two sets of ranges using functions like `nearest()`, `distance()`, `precede()`, and `follow()`. Each of these functions returns integer indices (or a `Hits` object) indicating which ranges in a “subject” set relate to each range in a “query” set, enabling you to quickly locate the closest overlap or upstream/downstream neighbor.
-
-1. `nearest()`
-The `nearest(x, subject, select="first", ignore.strand=FALSE)` function finds, for each range in **x** , the index of the closest range in **subject**  (ties broken arbitrarily). If **subject**  is omitted, **x**  is used as both query and subject, so each range’s nearest neighbor in the same set is returned (excluding itself when `select="first"`)
-2. `distance()`
-The `distance(x, y)` function computes the signed distance between each range in **x**  and the corresponding range in **y** , recycling shorter objects as needed. A distance of 0 indicates overlap; positive values indicate separation; negative values can occur for zero‐width ranges or self‐distance in certain contexts.
-3. `precede()`
-`precede(x, subject, select="first", ignore.strand=FALSE)` returns, for each range in **x** , the index of the nearest range in **subject**  that falls entirely **before**  it (i.e., with end < start of x). This lets you identify upstream neighbors on the same chromosome and strand (unless `ignore.strand=TRUE`).
-4. `follow()`
-`follow(x, subject, select="first", ignore.strand=FALSE)` returns, for each range in **x** , the index of the nearest range in **subject**  that falls entirely **after**  it (i.e., with start > end of x) . This identifies downstream neighbors on the same chromosome/strand by default.
+## `overlapsAny()`
 
 ```{r}
 #| echo: true
 #| include: true
-# Find the nearest range in gr2 for each range in gr
-
-query   <- GRanges("chr1", IRanges(c(10, 20, 50), width=5))
-subject <- GRanges("chr1", IRanges(c(1, 15, 40, 70), width=5))
-
-# Find nearest subject range for each query range
-hits_nearest <- nearest(query, subject)
-hits_nearest
-plotGenomicTracks(list(query=query, subject=subject))
-distances <- distance(query, subject[1:3])
-distances
-
-# Find preceding subject range for each query range - look for downstream neighbors
-hits_precede <- precede(query, subject)
-hits_precede
-
-
-
-# Find the following range - look for upstream neighbors
-hits_follow <- follow(query, subject)
-hits_follow
-
-
-# more examples
-subject <- GRanges(
-  seqnames = "chr1",
-  ranges   = IRanges(start = c(5, 20, 40), width = 5),
-  strand   = c("+", "-", "+"),
-  id = 1:3
-)
-# Query: 4 ranges on chr1 with mixed strands
-query <- GRanges(
-  seqnames = "chr1",
-  ranges   = IRanges(start = c(1, 15, 30, 50), width = 5),
-  strand   = c("+", "-", "*", "-"),
-  id = 1:4
-)
-plotGenomicTracks(list(query=query, subject=subject))
-hits_precede <- precede(query, subject)
-hits_precede
-hits_follow <- follow(query, subject)
-hits_follow
+overlapsAny(gr1, gr2)
 ```
-Orientation and strand for precede and follow: Orientation is 5’ to 3’, consistent with the direction of translation. Because positional numbering along a chromosome is from left to right
-and transcription takes place from 5’ to 3’, precede and follow can appear to have ‘opposite’
-behavior on the + and - strand. Using positions 5 and 6 as an example, 5 precedes 6 on the +
-strand but follows 6 on the - strand.
-The table below outlines the orientation when ranges on different strands are compared. In
-general, a feature on * is considered to belong to both strands. The single exception is when
-both x and subject are * in which case both are treated as +.
 
-|  x  | subject | orientation                                               |
-| :-: | :-----: | :-------------------------------------------------------- |
-|  +  |    +    | --->                                                      |
-|  +  |    -    | NA                                                        |
-|  +  |    \*   | --->                                                      |
-|  -  |    +    | NA                                                        |
-|  -  |    -    | <---                                                      |
-|  -  |    \*   | <---                                                      |
-|  \* |    +    | --->                                                      |
-|  \* |    -    | <---                                                      |
-|  \* |    \*   | ---> (the only situation where `*` arbitrarily means `+`) |
+A logical vector — `TRUE` where the range has at least one overlap.
 
-## Set Operations on Ranges
+> 📝 **Task 4** — build two GRanges on chr1 of your choice and use
+> `subsetByOverlaps()` to keep only the ranges of the first that overlap any
+> range of the second. Plot input, reference, and result.
+
+# Part 7 — Nearest-neighbor operations
+
+## `nearest()` and `distance()`
 
 ```{r}
 #| echo: true
 #| include: true
-# Create two more GRanges objects for set operations
-gr_a <- GRanges(
-  seqnames = "chr1",
-  ranges = IRanges(start = c(10, 20, 30), end = c(15, 25, 35))
-)
-
-gr_b <- GRanges(
-  seqnames = "chr1",
-  ranges = IRanges(start = c(12, 22, 40), end = c(17, 27, 45))
-)
-
-# Union of ranges
-union(gr_a, gr_b)
-plotGenomicTracks(list(gr_a=gr_a, gr_b=gr_b, union=union(gr_a, gr_b)))
-
-
-
-# Intersection of ranges
-intersect(gr_a, gr_b)
-plotGenomicTracks(list(gr_a=gr_a, gr_b=gr_b, intersect=intersect(gr_a, gr_b)))
-
-# Difference of ranges (ranges in gr_a that don't overlap with gr_b)
-setdiff(gr_a, gr_b)
-plotGenomicTracks(list(gr_a=gr_a, gr_b=gr_b, setdiff=setdiff(gr_a, gr_b)))
+#| fig-height: 2
+query   <- GRanges("chr1", IRanges(c(10, 25, 55), width = 5))
+subject <- GRanges("chr1", IRanges(c(1, 18, 40, 70), width = 5))
+plotGenomicTracks(list(query = query, subject = subject))
 ```
-
-# Working with GRangesList
-
-GRangesList objects are useful for representing hierarchical relationships, such as exons grouped by transcript or peaks grouped by sample.
 
 ```{r}
 #| echo: true
 #| include: true
-# Create a GRangesList
+nearest(query, subject)
+distance(query, subject[1:3])
+```
+
+## `precede()` and `follow()` — what they answer
+
+Unlike `nearest()`, which can return a subject that *overlaps* the query,
+`precede` and `follow` always look **outside** the query and pick a
+**direction**.
+
+-   `precede(x, s)` — for each `x`, the index of the **first range in `s`
+    that comes *after* `x` along the 5′ → 3′ direction**.
+    *(In the printed gene-track sense: the next downstream feature.)*
+-   `follow(x, s)` — for each `x`, the index of the **last range in `s` that
+    came *before* `x` along the 5′ → 3′ direction**.
+    *(The previous upstream feature.)*
+
+If no such range exists, the result is `NA`.
+
+## Why "precede" feels backwards at first
+
+Read the names from the **subject's** point of view:
+
+-   *"Which range in `s` does `x` **precede**?"* → the one **after** `x`.
+-   *"Which range in `s` does `x` **follow**?"*  → the one **before** `x`.
+
+So `precede(x, s)` returns the **downstream** neighbor of `x`, and
+`follow(x, s)` returns the **upstream** neighbor of `x`. Many people
+remember it the other way around — keep this slide handy.
+
+## A worked example
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 2.2
+q <- GRanges("chr1", IRanges(c(25), width = 5), strand = "+", id = "q")
+s <- GRanges("chr1", IRanges(c(5, 15, 50, 70), width = 5),
+             strand = "+", id = paste0("s", 1:4))
+plotGenomicTracks(list(query = q, subject = s))
+```
+
+```{r}
+#| echo: true
+#| include: true
+precede(q, s)   # which subject comes AFTER q?  → s3 (index 3)
+follow(q, s)    # which subject came BEFORE q?  → s2 (index 2)
+```
+
+So `q` *precedes* `s[3]` and *follows* `s[2]`.
+
+## Distance to the precede/follow neighbor
+
+A common pattern: find the upstream/downstream neighbor and how far away it
+is.
+
+```{r}
+#| echo: true
+#| include: true
+i_down <- precede(q, s)
+i_up   <- follow(q, s)
+
+distance(q, s[i_down])   # bp to next downstream feature
+distance(q, s[i_up])     # bp to previous upstream feature
+```
+
+This is exactly how you'd annotate "distance to next gene" for ChIP-seq
+peaks or variants.
+
+## Why the strand matters
+
+The 5′ → 3′ direction depends on **strand**, but plot positions go
+left-to-right. So on a `-`-strand gene, the *upstream* neighbor is on the
+**right** of the plot, and `follow()` returns it.
+
+```{r}
+#| echo: true
+#| include: true
+q_minus <- GRanges("chr1", IRanges(25, width = 5), strand = "-", id = "q-")
+s_plus  <- GRanges("chr1", IRanges(c(5, 50), width = 5),
+                   strand = "+", id = c("s1", "s2"))
+precede(q_minus, s_plus)   # NA: opposite strands
+```
+
+Mixed strands often return `NA` — see the table on the next slide.
+
+## Strand effects on precede / follow {.smaller}
+
+The strand of `x` and `subject` determines whether a comparison is even
+defined. Set `ignore.strand = TRUE` to disable this check.
+
+|  x  | subject | orientation                                          |
+|:---:|:-------:|:-----------------------------------------------------|
+|  +  |    +    | --->                                                 |
+|  +  |    -    | NA                                                   |
+|  +  |    \*   | --->                                                 |
+|  -  |    -    | <---                                                 |
+|  -  |    \*   | <---                                                 |
+|  \* |    +    | --->                                                 |
+|  \* |    \*   | --->  (only case where `*` arbitrarily means `+`)    |
+
+The single exception: when **both** `x` and `subject` are `*`, both are
+treated as `+`.
+
+# Part 8 — Set operations on ranges
+
+## Setup
+
+```{r}
+#| echo: true
+#| include: true
+gr_a <- GRanges("chr1", IRanges(start = c(10, 20, 30), end = c(15, 25, 35)))
+gr_b <- GRanges("chr1", IRanges(start = c(12, 22, 40), end = c(17, 27, 45)))
+```
+
+## `union()`
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 3
+plotGenomicTracks(list(gr_a = gr_a, gr_b = gr_b,
+                 union = union(gr_a, gr_b)))
+```
+
+## `intersect()`
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 3
+plotGenomicTracks(list(gr_a = gr_a, gr_b = gr_b,
+                 intersect = intersect(gr_a, gr_b)))
+```
+
+## `setdiff()`
+
+```{r}
+#| echo: true
+#| include: true
+#| fig-height: 3
+plotGenomicTracks(list(gr_a = gr_a, gr_b = gr_b,
+                 setdiff = setdiff(gr_a, gr_b)))
+```
+
+> 📝 **Task 5** — using `gr_a` and `gr_b` above, compute the **symmetric
+> difference** (parts in either but not in both).
+> Hint: `setdiff(union(...), intersect(...))`.
+
+# Part 9 — GRangesList
+
+## Why GRangesList?
+
+Use a `GRangesList` when intervals come in groups:
+
+-   exons of a transcript,
+-   peaks per sample,
+-   binding sites per TF.
+
+It is a list whose elements are all `GRanges`.
+
+## Creating a GRangesList
+
+```{r}
+#| echo: true
+#| include: true
 grl <- GRangesList(
-  sample1 = GRanges(
-    seqnames = c("chr1", "chr2"),
-    ranges = IRanges(start = c(10, 20), end = c(20, 30))
-  ),
-  sample2 = GRanges(
-    seqnames = c("chr1", "chr3"),
-    ranges = IRanges(start = c(15, 40), end = c(25, 50))
-  )
+  sample1 = GRanges(seqnames = c("chr1", "chr2"),
+                    ranges   = IRanges(start = c(10, 20), end = c(20, 30))),
+  sample2 = GRanges(seqnames = c("chr1", "chr3"),
+                    ranges   = IRanges(start = c(15, 40), end = c(25, 50)))
 )
-
-# Display the GRangesList
 grl
-
-# Access elements of the list
-grl[[1]]
-grl$sample2
-
-# Get the length of each element
-elementNROWS(grl)
-
-# Unlist to get a single GRanges object
-unlist(grl)
-
-# Apply operations to each element
-endoapply(grl, shift, 5)
 ```
 
-# Integration with Biostrings
-
-One of the  features of GenomicRanges is its integration with Biostrings, allowing you to extract and analyze sequences from genomic coordinates.
+## Working with a GRangesList
 
 ```{r}
 #| echo: true
 #| include: true
-# Load required packages
-library(Biostrings)
+grl[[1]]              # first element
+grl$sample2           # by name
+elementNROWS(grl)     # length of each element
+unlist(grl)           # flatten
+```
+
+`endoapply(grl, shift, 5)` applies `shift()` to each element and returns a
+GRangesList of the same shape.
+
+# Part 10 — Integration with Biostrings
+
+## Sequences from coordinates
+
+`getSeq()` extracts DNA from a `BSgenome` at the given GRanges coordinates.
+
+```{r}
+#| echo: true
+#| include: true
+#| eval: false
 library(BSgenome.Hsapiens.UCSC.hg38)
 
-# Create a GRanges object for some genes
 genes <- GRanges(
   seqnames = c("chr1", "chr2"),
-  ranges = IRanges(start = c(10000, 20000), end = c(10500, 20500)),
-  strand = c("+", "-"),
-  gene_id = c("gene1", "gene2")
+  ranges   = IRanges(start = c(10000, 20000), end = c(10500, 20500)),
+  strand   = c("+", "-"),
+  gene_id  = c("gene1", "gene2")
 )
 
-# Extract DNA sequences for these regions
-# Note: In a real lesson, we would use actual genomic coordinates
-# This is just a demonstration of the syntax
 gene_seqs <- getSeq(BSgenome.Hsapiens.UCSC.hg38, genes)
 names(gene_seqs) <- genes$gene_id
-print(gene_seqs)
-
-gc_content <- letterFrequency(gene_seqs, "GC", as.prob = TRUE)
-print(gc_content)
-
+gene_seqs
+letterFrequency(gene_seqs, "GC", as.prob = TRUE)
 ```
 
+The BSgenome package is large (~1 GB) — skip if not installed.
