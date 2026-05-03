@@ -1,0 +1,106 @@
+---
+title: "Working with a Coding Agent - Security"
+
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    incremental: false
+    code-overflow: wrap
+    code-line-numbers: false
+    self-contained: true
+---
+
+
+## What the agent can actually do
+
+When you run an agent like Claude Code, Cursor, or similar with execution enabled, it can:
+
+- Read and write any file your user account can
+- Run any command your shell can run
+- Install packages, including from arbitrary sources
+- Make network requests on your behalf
+- Use any credential it finds — SSH keys, API tokens, browser cookies
+
+. . .
+
+It is, in effect, a **shell user with your privileges**. Not a sandboxed code box.
+
+
+
+## Three classes of risk{.smaller}
+
+::: {.columns}
+::: {.column width="33%"}
+**Mistakes**
+
+The agent does what you asked, badly.
+
+`rm` in the wrong directory. Force-pushes the wrong branch. Pip-installs into system Python.
+:::
+::: {.column width="33%"}
+**Misalignment**
+
+The agent does something you didn't ask for.
+
+"Helpfully" deletes files it considers obsolete. Refactors code you wanted left alone.
+:::
+::: {.column width="33%"}
+**Injection**
+
+Something the agent reads tells it to do something bad.
+
+A README in a cloned repo, a comment in a file, output from a web fetch — all are inputs the agent might treat as instructions.
+:::
+:::
+
+. . .
+
+The first two are familiar. The third is new and underappreciated.
+
+## What you should worry about, in order
+
+1. **Credentials on disk.** SSH keys, `.env` files, cloud credentials, browser cookies. Anything in a dotfile.
+2. **Files outside the project directory.** `~/Documents`, `~/Desktop`, the entire home directory.
+3. **Networked side effects.** Pushes, deploys, API calls that cost money or send email.
+4. **The project itself.** Less critical because you have version control. Right?
+
+. . .
+
+The risk ranking is roughly: *credentials > unrelated files > external systems > your code*.
+
+
+
+## Defenses you can adopt{.smaller}
+
+| Defense | Cost | Catches |
+|---|---|---|
+| Run the agent from a project directory, not `~` | None | Most "wrong file" mistakes |
+| Commit before every agent session | None | Reverts bad edits |
+| Keep secrets out of the project (`.env` in `.gitignore`) | None | Most credential leaks |
+| Review diffs before accepting | Minutes | Misalignment |
+| Disable auto-execution for shell commands | Friction | Injected/destructive commands |
+| Use a separate user account or VM for risky work | Setup time | Catastrophic outcomes |
+
+. . .
+
+## Sandboxing: contain the blast radius{.smaller}
+
+A sandbox is a restricted environment where the agent can run, but cannot reach:
+
+- Files outside the sandbox (your home directory, SSH keys, other projects)
+- Your real credentials (cloud, GitHub, email)
+- Persistent state (a fresh sandbox starts clean every time)
+
+
+
+## Common options, in increasing strength{.smaller}
+
+| Option | Setup effort | Isolation |
+|---|---|---|
+| Separate Linux user account | Low | File system only |
+| Docker / Podman container | Medium | File system + network + processes |
+| Apptainer / Singularity | Medium | Same, oriented to HPC |
+| Virtual machine (VM) | High | Full OS isolation |
+| Cloud dev environment (Codespaces, devcontainers) | Low–medium | Full isolation, off your laptop |
+
