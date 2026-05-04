@@ -1,5 +1,5 @@
 ## Introduction to R and RStudio 
-
+test2
 ### Why R for Biologists 
 - Brief history and strengths of R in data science and bioinformatics
 - Installing R and RStudio (or other IDEs)
@@ -379,7 +379,7 @@ https://bookdown.org/rdpeng/exdata/the-base-plotting-system-1.html
 - Checking models of evolution
 
 - Basic comparative methods (e.g., phylogenetic independent contrasts)
-
+- test2
 
 ---
 
