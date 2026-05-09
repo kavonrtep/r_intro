@@ -1,0 +1,462 @@
+---
+title: "SARS-CoV-2 phylogeny visualization — concepts and gallery"
+subtitle: "What you can do with a tree, a metadata table, and ggtree"
+author: "Instructor notes"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    fig-width: 9
+    fig-height: 6
+    embed-resources: true
+    theme: cosmo
+execute:
+  warning: false
+  message: false
+  cache: false
+---
+
+```{r setup, include=FALSE}
+# Render from the project root with:
+#   quarto render notes/concepts.qmd
+# Quarto's default CWD for chunks is the .qmd directory, so we hop up
+# one level so that paths like "data/..." work the same as in the
+# analysis scripts.
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+```
+
+```{r packages}
+library(ape)
+library(treeio)
+library(ggtree)
+library(ggtreeExtra)
+library(ggplot2)
+library(ggnewscale)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(lubridate)
+library(patchwork)
+library(Biostrings)
+```
+
+# Why this document exists
+
+This is a gallery of the visualization techniques you will use in the SARS-CoV-2 project. Every concept is illustrated with a plot generated from the actual project data (`data/ncov_subsample.nwk` + `data/ncov_metadata.tsv`). Read it once before starting the analysis to see *what the destination looks like*; come back to it when you forget which `gheatmap` argument controls the gap between tree and matrix.
+
+# 1. A phylogenetic tree is a 2-D coordinate system
+
+This is the single most important idea in the project.
+
+A drawn tree has two axes:
+
+- The **y-axis** indexes tips. Internal y-coordinates are the average of the children's y-coordinates. The order is determined by `ladderize()` and is otherwise arbitrary.
+- The **x-axis** carries either **substitutions per site** (the raw output of a tree-builder) or **calendar time** (the output of a clock-calibration step). For SARS-CoV-2 builds, it is calendar time.
+
+Once you accept this, *anything else you draw* is just another layer on the same coordinate system: tip points at `(x_tip, y_tip)`, heatmap cells at `(x_offset + col_index, y_tip)`, map labels connected from `(x_tip, y_tip)` to a real-world `(longitude, latitude)`.
+
+```{r load_data}
+tree <- read.tree("data/ncov_subsample.nwk")
+meta <- read_tsv("data/ncov_metadata.tsv", show_col_types = FALSE)
+
+cat("Tips:", length(tree$tip.label), "\n")
+cat("Branch units (max root-to-tip):",
+    round(max(node.depth.edgelength(tree)), 2), " — should be a few years\n")
+cat("Date span:", as.character(min(meta$date)), "→",
+    as.character(max(meta$date)), "\n")
+```
+
+## 1a. Branch length units — verify before you plot
+
+`ggtree(td, mrsd = ...)` only works if branches are in **time** (years). If they are in substitutions/site, the time axis labels will be wrong and silently misleading.
+
+```{r units_check}
+# Time-calibrated tree: a multi-year SARS-CoV-2 tree should have
+# max(node.depth.edgelength()) on the order of 3–6 years.
+# A subs/site tree would give ~0.001–0.01.
+max(node.depth.edgelength(tree))
+```
+
+## 1b. The base time-axis tree
+
+Every figure in this gallery is built on top of this single object. **`mrsd`** is the most recent sampling date — `ggtree` subtracts branch lengths from this anchor to place every internal node on the calendar.
+
+```{r base_tree}
+meta <- meta %>%
+  mutate(decimal_date = decimal_date(ymd(date)))
+
+td <- full_join(as_tibble(tree), meta, by = c("label" = "strain")) %>%
+  as.treedata()
+
+mrsd_value <- max(meta$decimal_date, na.rm = TRUE)
+
+p_base <- ggtree(td, mrsd = mrsd_value, as.Date = TRUE,
+                 size = 0.25, color = "grey40") +
+  theme_tree2() +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("Foundation: time-calibrated tree, 400 SARS-CoV-2 tips, 2020–2026")
+
+p_base
+```
+
+This is your blank canvas. Every section below is `p_base + something`.
+
+# 2. Nextstrain metadata anatomy
+
+Nextstrain distributes per-tip metadata in a wide TSV. The columns relevant to this project, with realistic example values:
+
+```{r meta_anatomy}
+meta %>%
+  select(strain, date, region, country, Nextstrain_clade,
+         pango_lineage, host, age, length, nextclade_mutations) %>%
+  slice_sample(n = 6)
+```
+
+| Column                | Type         | Role in the analysis                                       |
+|-----------------------|--------------|------------------------------------------------------------|
+| `strain`              | character    | **Join key** to `tree$tip.label`                           |
+| `date`, `decimal_date`| date / num   | `mrsd` anchor and continuous x-aesthetic                    |
+| `region`, `country`   | categorical  | Geographic encodings (tip color, map fill)                 |
+| `Nextstrain_clade`    | categorical  | The standard SARS-CoV-2 lineage label (19A, 21K, 25C, …)   |
+| `pango_lineage`       | categorical  | Pango notation (B.1.1.7, BA.1, JN.1, …)                    |
+| `host`                | categorical  | Usually `Homo sapiens`; cross-host builds add bat, pangolin|
+| `age`, `sex`          | num / cat    | Patient metadata (often missing — visualize that too)       |
+| `length`              | numeric      | Genome length, useful as a quality-control variable         |
+| `nextclade_mutations` | character    | Comma-separated mutations, e.g. `S:N501Y,S:D614G,...`       |
+| `latitude`/`longitude`| numeric      | Geographic projection                                       |
+
+## 2a. The join-key invariant
+
+Always run **before** binding metadata to the tree:
+
+```{r join_check}
+length(setdiff(tree$tip.label, meta$strain))   # MUST be 0
+length(setdiff(meta$strain, tree$tip.label))   # tips not in tree (often fine)
+```
+
+If the first line is anything other than zero, fix the strain naming on **both** sides with the same regex before joining. The most common cause is `dplyr` operations that silently re-encode characters in strain names like `Australia/NSW-1234/2021`.
+
+# 3. The six visual encodings
+
+The remaining sections of the project are six ways to **bind metadata to the tree's coordinate system**. Each has a sweet spot and a failure mode. Pick the encoding that matches the question.
+
+## 3a. Tip aesthetics — `geom_tippoint`
+
+Best for: 1–2 categorical or continuous variables that describe *where each tip ended up*.
+
+```{r tip_aes}
+p1 <- p_base +
+  geom_tippoint(aes(color = Nextstrain_clade), size = 1.4, alpha = 0.85) +
+  scale_color_viridis_d(option = "turbo", name = "Clade") +
+  guides(color = guide_legend(override.aes = list(size = 3),
+                              ncol = 2)) +
+  ggtitle("Encoding 1: tip aesthetics — clade on tips")
+
+p1
+```
+
+**Why two scales need `ggnewscale`.** A single ggplot can only have *one* color scale at a time. To put clade on big tips and region on small tips, you must reset the scale stack between the two layers:
+
+```{r tip_aes_two}
+p2 <- p_base +
+  geom_tippoint(aes(color = Nextstrain_clade), size = 1.4) +
+  scale_color_viridis_d(option = "turbo", name = "Clade") +
+  guides(color = guide_legend(override.aes = list(size = 3), ncol = 2)) +
+  new_scale_color() +
+  geom_tippoint(aes(color = region), size = 0.6,
+                position = position_nudge(x = 50)) +
+  scale_color_brewer(palette = "Set1", name = "Region") +
+  ggtitle("Two color scales on tips — note `new_scale_color()` between them")
+
+p2
+```
+
+Forget `new_scale_color()` and both layers will fight over a single scale, mapping the *union* of `Nextstrain_clade` and `region` to one palette. The plot will draw, the colors will be wrong, and ggplot will not warn you.
+
+## 3b. Branch aesthetics — ancestral state along the tree
+
+Tips show where lineages *ended up*. Branches show *evolutionary history* — far more informative for variant emergence.
+
+```{r branch_aes, fig.height=7}
+# `ape::ace` requires a rooted, fully dichotomous tree. The Nextstrain
+# build occasionally has polytomies — resolve them with multi2di first.
+tree_d <- ape::multi2di(tree)
+
+clade_states <- factor(meta$Nextstrain_clade[match(tree_d$tip.label, meta$strain)])
+asr <- ape::ace(clade_states, tree_d, type = "discrete", model = "ER")
+node_states <- apply(asr$lik.anc, 1, function(x) levels(clade_states)[which.max(x)])
+all_states <- c(as.character(clade_states), node_states)
+
+td2 <- groupOTU(tree_d, split(seq_along(all_states), all_states))
+
+p3 <- ggtree(td2, aes(color = group), mrsd = mrsd_value,
+             as.Date = TRUE, size = 0.45) +
+  scale_color_viridis_d(option = "turbo", name = "Inferred clade") +
+  theme_tree2() +
+  guides(color = guide_legend(ncol = 2)) +
+  ggtitle("Encoding 2: branch aesthetics — naive ancestral state reconstruction")
+
+p3
+```
+
+> **Critical-thinking hazard.** ML ancestral state reconstruction with the equal-rates (ER) model ignores sampling bias and assumes time-reversibility. SARS-CoV-2 sampling is wildly biased (UK and USA dominate). Naive ASR systematically over-estimates transitions out of well-sampled regions. Useful as an illustration; *not* a basis for epidemiological claims. Read **Morel et al. 2021, MBE 38:1777** before you trust any branch-color figure.
+
+## 3c. Heatmap matrix — `gheatmap`
+
+When the metadata is wide and binary (presence/absence of many mutations), `gheatmap` paints a matrix beside the tree, one row per tip, one column per variable.
+
+```{r gheatmap, fig.height=8}
+key_muts <- c("S:N501Y", "S:E484K", "S:D614G", "S:K417N", "S:L452R",
+              "S:T478K", "S:P681H", "S:P681R", "S:N679K", "S:H655Y")
+
+mut_long <- meta %>%
+  select(strain, nextclade_mutations) %>%
+  separate_rows(nextclade_mutations, sep = ",") %>%
+  filter(nextclade_mutations %in% key_muts) %>%
+  distinct() %>%
+  mutate(present = "present")
+
+mut_matrix <- mut_long %>%
+  pivot_wider(names_from = nextclade_mutations,
+              values_from = present, values_fill = "absent") %>%
+  tibble::column_to_rownames("strain")
+
+# Make sure every key_mut is a column even if entirely absent
+for (m in setdiff(key_muts, colnames(mut_matrix))) mut_matrix[[m]] <- "absent"
+mut_matrix <- mut_matrix[, key_muts]
+
+# Tips with no listed mutations need an "all absent" row
+missing_tips <- setdiff(tree$tip.label, rownames(mut_matrix))
+if (length(missing_tips) > 0) {
+  add <- as.data.frame(matrix("absent", nrow = length(missing_tips),
+                              ncol = ncol(mut_matrix),
+                              dimnames = list(missing_tips, colnames(mut_matrix))))
+  mut_matrix <- rbind(mut_matrix, add)
+}
+
+p4 <- gheatmap(p1, mut_matrix,
+               offset = 50, width = 0.6,
+               colnames_angle = 45,
+               colnames_offset_y = -2,
+               font.size = 3) +
+  scale_fill_manual(values = c(present = "firebrick", absent = "grey92"),
+                    name = "Spike mutation") +
+  ggtitle("Encoding 3: gheatmap — spike mutations bound to tip y-coordinates")
+
+p4
+```
+
+**Two principles.**
+
+1. `gheatmap` aligns matrix rows to tip y-coordinates **by row name**. Don't `arrange()` the matrix — sorting it by hand will silently misalign every row.
+2. The figure makes **convergent evolution** visible: D614G appeared early and is fixed across most lineages; N501Y appears independently in Alpha (2020-I) and Omicron (BA.x, JN.1, …). You *see* it on the figure.
+
+## 3d. Adjacent strips — `geom_facet`
+
+When you want to bind several metadata columns of *different types* (a categorical, a continuous, a bar chart) to the same tree, use `geom_facet`. Each call adds a vertical strip aligned to tip y-coordinates.
+
+```{r geom_facet, fig.height=8}
+# Subtle pitfall: when you attach metadata to the tree with %<+%, *only*
+# include the columns the in-tree layers (e.g. tippoint color) actually
+# use. Columns referenced inside geom_facet should live ONLY in the
+# geom_facet `data = ...` argument. If both contexts have the same column
+# (e.g. `region`), ggplot's aesthetic resolver mis-routes layer 4 of the
+# assembled gtable and you get "object 'region' not found".
+tip_meta <- meta %>%
+  filter(strain %in% tree$tip.label) %>%
+  mutate(length_kb = length / 1000)
+
+tip_for_attach <- tip_meta %>% select(strain, Nextstrain_clade)   # for %<+%
+tip_for_facet  <- tip_meta %>% mutate(label = strain)              # for geom_facet
+
+p5_base <- ggtree(tree, mrsd = mrsd_value, as.Date = TRUE,
+                  size = 0.25, color = "grey40") +
+  theme_tree2() +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p5 <- p5_base %<+% tip_for_attach +
+  geom_tippoint(aes(color = Nextstrain_clade),
+                size = 1.2, alpha = 0.85) +
+  scale_color_viridis_d(option = "turbo", name = "Clade",
+                        guide = guide_legend(ncol = 2,
+                                             override.aes = list(size = 3))) +
+  geom_facet(panel = "Region",
+             data = tip_for_facet,
+             geom = geom_tile,
+             mapping = aes(x = 1, fill = region),
+             width = 0.6) +
+  scale_fill_brewer(palette = "Set2", name = "Region") +
+  geom_facet(panel = "Length (kb)",
+             data = tip_for_facet,
+             geom = geom_point,
+             mapping = aes(x = length_kb),
+             size = 0.7, color = "grey30") +
+  ggtitle("Encoding 4: geom_facet — region + genome length as adjacent strips")
+
+facet_widths(p5, c(Tree = 3, Region = 0.4, `Length (kb)` = 1.0))
+```
+
+`facet_widths()` is what controls the relative panel widths and **must be the last call** — it operates on the assembled gtable.
+
+For very wide trees, switch to a circular layout via `ggtreeExtra::geom_fruit()`:
+
+```{r ggfruit, fig.height=9}
+# `ggtreeExtra::geom_fruit` does not currently play well with Date x-axes,
+# so build the fan layout in branch-units (no mrsd) for the demo.
+p_fan <- ggtree(td, layout = "fan", open.angle = 12,
+                size = 0.2, color = "grey50") +
+  geom_fruit(geom = geom_tile, mapping = aes(fill = region),
+             offset = 0.05, width = 0.4) +
+  scale_fill_brewer(palette = "Set2", name = "Region") +
+  new_scale_fill() +
+  geom_fruit(geom = geom_tile, mapping = aes(fill = Nextstrain_clade),
+             offset = 0.05, width = 0.4) +
+  scale_fill_viridis_d(option = "turbo", name = "Clade",
+                       guide = guide_legend(ncol = 2)) +
+  ggtitle("Same data, polar layout (branch-units axis) — useful for >500 tips")
+
+p_fan
+```
+
+## 3e. MSA alignment — `msaplot`
+
+When you want to link **specific sequence sites** to tree topology (e.g. "where on the tree does spike codon 501 mutate?"), put the alignment beside the tree.
+
+This project does not ship a real spike alignment, so we generate a small synthetic one for the demo. In practice the alignment file is documented in `nextstrain_howto.md` §7 and lives at `data/spike_RBD_aligned.fasta`.
+
+```{r msa_demo, fig.height=6}
+# Synthetic 12-tip subtree + 60-nt fake alignment for illustration only
+set.seed(7)
+demo_tips <- sample(tree$tip.label, 12)
+demo_tree <- ape::keep.tip(tree, demo_tips)
+
+# Random 60-nt alignment with a few "mutated" columns to mimic real signal
+nt_alphabet <- c("A", "C", "G", "T")
+n_sites <- 60
+ref <- sample(nt_alphabet, n_sites, replace = TRUE)
+
+demo_aln <- vapply(demo_tips, function(tip) {
+  s <- ref
+  # Each tip has 0-3 random differences
+  k <- sample(0:3, 1)
+  if (k > 0) {
+    pos <- sample(seq_len(n_sites), k)
+    s[pos] <- vapply(s[pos], function(x) sample(setdiff(nt_alphabet, x), 1), character(1))
+  }
+  paste(s, collapse = "")
+}, character(1))
+
+aln_dss <- DNAStringSet(demo_aln); names(aln_dss) <- demo_tips
+fa_path <- tempfile(fileext = ".fasta")
+writeXStringSet(aln_dss, fa_path)
+
+p_demo_base <- ggtree(demo_tree) + geom_tiplab(size = 2.8, align = TRUE)
+
+msaplot(p_demo_base, fasta = fa_path,
+        offset = 0.3, width = 1.5,
+        color = c(A = "#5cb85c", C = "#5bc0de",
+                  G = "#f0ad4e", T = "#d9534f", "-" = "white")) +
+  ggtitle("Encoding 5: msaplot — alignment columns as cells, real example uses RBD window")
+```
+
+In a real run with `data/spike_RBD_aligned.fasta`, restrict `window = c(1390, 1620)` (or whatever the RBD nt range is for your reference) — full-genome alignments swamp the figure. Pair with branch-color-by-clade and the Omicron "wall of mutations" pattern at specific RBD positions becomes visually obvious.
+
+## 3f. Geographic projection
+
+Two complementary approaches:
+
+**Side-by-side tree + map.** Country-level fill on a world map, joined to dominant-clade-per-country.
+
+```{r map_side, fig.height=7}
+world <- map_data("world")
+
+country_clade <- meta %>%
+  count(country, Nextstrain_clade) %>%
+  group_by(country) %>%
+  slice_max(n, n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+p_map <- ggplot() +
+  geom_polygon(data = world,
+               aes(long, lat, group = group),
+               fill = "grey95", color = "grey60", linewidth = 0.1) +
+  geom_polygon(data = world %>%
+                 inner_join(country_clade, by = c("region" = "country")),
+               aes(long, lat, group = group, fill = Nextstrain_clade),
+               color = "grey50", linewidth = 0.15) +
+  scale_fill_viridis_d(option = "turbo",
+                       guide = guide_legend(ncol = 2)) +
+  coord_quickmap() + theme_void() +
+  ggtitle("Dominant Nextstrain clade per country (in this sample)")
+
+(p1 | p_map) + plot_layout(widths = c(1, 1.3))
+```
+
+**Tip-to-coordinate connectors** via `phytools::phylo.to.map`:
+
+```{r phytools_map, fig.height=7, eval=requireNamespace("phytools", quietly = TRUE)}
+suppressPackageStartupMessages(library(phytools))
+
+coords <- meta %>%
+  select(strain, latitude, longitude) %>%
+  filter(strain %in% tree$tip.label,
+         !is.na(latitude), !is.na(longitude)) %>%
+  tibble::column_to_rownames("strain") %>%
+  as.matrix()
+
+common <- intersect(rownames(coords), tree$tip.label)
+tree_geo <- ape::keep.tip(tree, common)
+coords <- coords[tree_geo$tip.label, c("latitude", "longitude")]
+
+obj <- phylo.to.map(tree_geo, coords, plot = FALSE)
+plot(obj, direction = "rightwards", colors = "darkblue",
+     cex.points = 0.4, ftype = "off", lwd = 0.25)
+title("Encoding 6b: phylo.to.map — tips connected to sampling coordinates")
+```
+
+> **Critical-thinking hazard.** Geographic visualizations are seductive but easily misleading. "Country of sampling" is not "country of infection origin." Dense sampling in a few countries (UK, USA, Denmark for SARS-CoV-2) creates apparent geographic structure that is actually sampling bias. Compute **sequences per country relative to reported cases per country** before drawing geographic conclusions.
+
+# 4. Pitfalls — visual quick-reference
+
+A short list of failure modes to recognize on sight:
+
+```{r pitfalls_summary, echo=FALSE, results='asis'}
+tab <- tribble(
+  ~Symptom, ~Cause, ~Fix,
+  "Tree x-axis labelled in years but everything pre-dates 1900",
+    "Branches in subs/site, not time",
+    "Time-calibrate first; check `max(node.depth.edgelength(tree))`",
+  "Heatmap rows misaligned with tips after `arrange()`",
+    "`gheatmap` uses row names, not row order",
+    "Don't sort the matrix manually",
+  "Two color scales bleed into one weird palette",
+    "Forgot `new_scale_color()` / `new_scale_fill()`",
+    "Insert reset between layers that share an aesthetic",
+  "`facet_widths()` does nothing or errors",
+    "Called before assembling the gtable",
+    "`facet_widths()` MUST be the last call in the chain",
+  "After joining metadata, half the tips are NA",
+    "Strain-name encoding mismatch (`/`, `|`, whitespace)",
+    "Run `setdiff(tree$tip.label, meta$strain)` before joining",
+  "Branch colors look 'too clean' for SARS-CoV-2",
+    "Naive ASR with ER model + biased sampling",
+    "Treat as illustration only; cite Morel 2021 in any caption"
+)
+knitr::kable(tab)
+```
+
+# 5. Where to go next
+
+- **Yu G., 2022.** *Data Integration, Manipulation and Visualization of Phylogenetic Trees.* <https://yulab-smu.top/treedata-book/>. Chapters 7 (`gheatmap`, `msaplot`) and 10 (`geom_facet`) are the canonical reference for everything in this gallery.
+- **Xu S. et al., 2022.** ggtreeExtra. *MBE* 39:msab166. Introduces `geom_fruit` and the polar layouts.
+- **Hadfield et al., 2018.** Nextstrain. *Bioinformatics* 34:4121. The pipeline that produces the data this project consumes.
+- **Morel et al., 2021.** Phylogenetic Analysis of SARS-CoV-2 Data Is Difficult. *MBE* 38:1777. Required reading before drawing epidemiological conclusions.
+
+# Session info
+
+```{r sessioninfo, echo=FALSE}
+sessionInfo()
+```

@@ -1,0 +1,268 @@
+---
+title: "Geographic projection — concepts you will use"
+subtitle: "Country-fill choropleth + tree-to-map projection in R"
+author: "Instructor notes"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    fig-width: 10
+    fig-height: 6
+    embed-resources: true
+    theme: cosmo
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+# Render from the project root with:
+#   quarto render notes/concepts.qmd
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+```
+
+```{r packages}
+library(ape)
+library(treeio)
+library(ggtree)
+library(ggplot2)
+library(maps)
+library(phytools)
+library(patchwork)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(lubridate)
+library(tibble)
+```
+
+# Why this document exists
+
+This is a self-contained gallery of the techniques you need for the **geographic-projection** starter project. Every concept is illustrated with a plot generated from the actual project data.
+
+The single question of this starter is: *how can we project a SARS-CoV-2 phylogeny onto a world map?* You will produce two complementary figures (country-fill choropleth, tree-to-map projection) and discuss what they hide about **sampling bias**.
+
+# 1. Three data sources, three country-name conventions
+
+Geographic visualization always starts with **a join**. You want to connect tip metadata (one row per genome) to country polygons (one row per polygon vertex). This works only if the country names line up exactly.
+
+You have three sources:
+
+```{r load_data}
+tree  <- read.tree("data/ncov_subsample.nwk")
+meta  <- read_tsv("data/ncov_metadata.tsv", show_col_types = FALSE)
+cases <- read_csv("data/covid_cases_per_country.csv", show_col_types = FALSE)
+world <- map_data("world")
+
+cat("Tips in tree:                  ", length(tree$tip.label), "\n")
+cat("Distinct countries in metadata:", length(unique(meta$country)), "\n")
+cat("Countries in OWID cases CSV:   ", nrow(cases), "\n")
+cat("Polygon-vertex rows in `world`:", nrow(world), "\n")
+cat("Distinct country names in `world`:", length(unique(world$region)), "\n")
+```
+
+The country-name discrepancies you will hit:
+
+```{r country_diffs}
+meta_in_world  <- intersect(unique(meta$country), unique(world$region))
+meta_not_world <- setdiff(unique(meta$country), unique(world$region))
+meta_not_owid  <- setdiff(unique(meta$country), unique(cases$country))
+
+cat("Metadata countries that DO match world polygons:", length(meta_in_world), "\n")
+cat("Metadata countries that don't match `world`:    ", length(meta_not_world), "\n")
+print(meta_not_world)
+cat("Metadata countries that don't match OWID cases: ", length(meta_not_owid), "\n")
+print(meta_not_owid)
+```
+
+Plan one tidy step at the top of your script to normalize OWID names to the metadata convention:
+
+```{r normalize, eval=FALSE}
+cases <- cases %>%
+  mutate(country = case_when(
+    country == "United States" ~ "USA",
+    country == "Czechia"       ~ "Czech Republic",
+    TRUE                        ~ country
+  ))
+```
+
+# 2. A `ggplot2` world map from `map_data("world")`
+
+`maps::map_data("world")` returns a **long data frame** where each row is one vertex of one country polygon. Group those vertices by `group` (NOT by `region` — many countries are split into several disjoint polygons, e.g. Russia by the dateline) and pipe into `geom_polygon`:
+
+```{r empty_world, fig.height=4}
+ggplot(world, aes(long, lat, group = group)) +
+  geom_polygon(fill = "grey95", color = "grey60", linewidth = 0.1) +
+  coord_quickmap() + theme_void() +
+  ggtitle("`map_data(\"world\")` rendered as polygons — your blank canvas")
+```
+
+# 3. Country-fill choropleth — encoding 1
+
+Compute one summary per country, then fill the polygons by that summary. Here we use **dominant `Nextstrain_clade` per country** as the fill:
+
+```{r country_clade_map, fig.height=5}
+country_clade <- meta %>%
+  count(country, Nextstrain_clade) %>%
+  group_by(country) %>%
+  slice_max(n, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  rename(dominant_clade = Nextstrain_clade)
+
+p_map <- ggplot() +
+  geom_polygon(data = world,
+               aes(long, lat, group = group),
+               fill = "grey95", color = "grey60", linewidth = 0.1) +
+  geom_polygon(data = world %>%
+                 inner_join(country_clade, by = c("region" = "country")),
+               aes(long, lat, group = group, fill = dominant_clade),
+               color = "grey50", linewidth = 0.15) +
+  scale_fill_viridis_d(option = "turbo",
+                       guide = guide_legend(ncol = 2)) +
+  coord_quickmap() + theme_void() +
+  ggtitle("Dominant Nextstrain clade per country (in this 400-tip sample)")
+
+p_map
+```
+
+Pair it with the same clade information on the tree, side-by-side via `patchwork`:
+
+```{r side_by_side, fig.height=8}
+meta <- meta %>% mutate(decimal_date = decimal_date(ymd(date)))
+td <- full_join(as_tibble(tree), meta, by = c("label" = "strain")) %>%
+  as.treedata()
+
+mrsd_value <- max(meta$decimal_date, na.rm = TRUE)
+
+p_tree <- ggtree(td, mrsd = mrsd_value, as.Date = TRUE,
+                 size = 0.25, color = "grey40") +
+  geom_tippoint(aes(color = Nextstrain_clade), size = 1.0, alpha = 0.85) +
+  scale_color_viridis_d(option = "turbo", name = "Clade",
+                        guide = "none") +
+  theme_tree2()
+
+(p_tree | p_map) + plot_layout(widths = c(1, 1.4))
+```
+
+This single composite figure is the most common publication-style artifact you can produce from tree + country metadata.
+
+# 4. Tree-to-map projection — encoding 2
+
+`phytools::phylo.to.map` connects each tip to its sampling coordinates with a line, drawing the tree on one side and the map on the other. It needs:
+
+- A **rooted, fully-labeled tree** (no internal-node labels needed).
+- A **2-column matrix** of coordinates with `tree$tip.label` as row names, columns in the order `c("latitude", "longitude")`, no `NA`s.
+
+```{r phylo_to_map_prep}
+coords <- meta %>%
+  select(strain, latitude, longitude) %>%
+  filter(strain %in% tree$tip.label,
+         !is.na(latitude), !is.na(longitude)) %>%
+  column_to_rownames("strain") %>%
+  as.matrix()
+
+# Drop tips with no coords from the tree, and align the matrix to the new tip order
+common  <- intersect(rownames(coords), tree$tip.label)
+tree_g  <- ape::keep.tip(tree, common)
+coords  <- coords[tree_g$tip.label, c("latitude", "longitude")]
+
+cat("Tips with coordinates:", nrow(coords), "\n")
+cat("Coordinate columns:   ", paste(colnames(coords), collapse = ", "), "\n")
+```
+
+Then render. The function plots via base graphics, so it does not return a `ggplot` — capture the figure with the chunk's `fig.height` and `fig.width`:
+
+```{r phylo_to_map, fig.width=12, fig.height=7}
+obj <- phylo.to.map(tree_g, coords, plot = FALSE)
+plot(obj, direction = "rightwards", colors = "darkblue",
+     cex.points = 0.4, ftype = "off", lwd = 0.25)
+title("phytools::phylo.to.map — tips connected to sampling coordinates")
+```
+
+What to look for: **clusters of lines converging on the same map point** are countries with many tips; **lines crossing entire oceans** are tips whose nearest tree-relative is on a different continent (often a sign of travel-related sequencing).
+
+# 5. The critical-thinking step: sampling bias
+
+Both figures so far invite a reader to draw geographic conclusions. *Both* are misleading without one more figure: **how many sequences came from each country?**
+
+```{r sampling_distribution, fig.height=4}
+seq_counts <- meta %>%
+  count(country, sort = TRUE) %>%
+  mutate(country = factor(country, levels = country))
+
+ggplot(seq_counts %>% slice_head(n = 15),
+       aes(x = country, y = n)) +
+  geom_col(fill = "steelblue") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  labs(x = NULL, y = "Sequences in this 400-tip sample",
+       title = "Top-15 countries by sequencing effort in this sample") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+A handful of countries dominate. Every conclusion drawn from the choropleth or the projection has to be qualified by this picture.
+
+## 5a. Sequences per million cases — the "intensity" view
+
+Joining the case-count data lets you ask a sharper question: **"who sequences disproportionately"** — i.e. countries whose sequences-per-case ratio is much higher than average.
+
+```{r intensity, fig.height=5}
+cases_norm <- cases %>%
+  mutate(country = case_when(
+    country == "United States" ~ "USA",
+    country == "Czechia"       ~ "Czech Republic",
+    TRUE                        ~ country
+  ))
+
+intensity <- seq_counts %>%
+  inner_join(cases_norm %>% select(country, total_cases), by = "country") %>%
+  mutate(seqs_per_M_cases = n / total_cases * 1e6) %>%
+  arrange(desc(seqs_per_M_cases)) %>%
+  slice_head(n = 15)
+
+ggplot(intensity, aes(x = reorder(country, seqs_per_M_cases),
+                      y = seqs_per_M_cases)) +
+  geom_col(fill = "firebrick") +
+  coord_flip() +
+  labs(x = NULL, y = "Sequences per million cases",
+       title = "Sequencing intensity, top 15") +
+  theme_minimal()
+```
+
+Countries near the top of this bar chart are over-represented in the sample relative to their actual case burden; countries near the *bottom* (often most populous) are under-represented. **The choropleth is silent about this.**
+
+# 6. Pitfalls quick-reference
+
+```{r pitfalls, echo=FALSE, results='asis'}
+tab <- tribble(
+  ~Symptom, ~Cause, ~Fix,
+  "Half the countries vanish after the choropleth join",
+    "Country-name mismatches across sources (`USA` vs `United States`, etc.)",
+    "Normalize names with one `case_when()` before joining; check `unique(world$region)`",
+  "`phylo.to.map` errors with 'NA in coords'",
+    "Some tips have NA latitude/longitude",
+    "Drop them with `keep.tip(tree, common)` before passing the matrix",
+  "`phylo.to.map` plot is silently rotated / wrong",
+    "Coordinate matrix columns out of order or row names misaligned with tip labels",
+    "Force `coords[tree$tip.label, c('latitude','longitude')]` after subsetting",
+  "Choropleth has weird stripes across the dateline",
+    "`world` polygons split by `group`, not just `region`",
+    "Always group by `group` (each polygon piece), not by `region`",
+  "Saved phylo.to.map PDF looks unreadable",
+    "Default aspect is too tall",
+    "Open `pdf(..., width = 14, height = 7)` before plotting"
+)
+knitr::kable(tab)
+```
+
+# 7. Where to go next
+
+- **`SARS-CoV_clade_waves/`** — same tree, different question: *did clades replace each other through time?* Pure tip color, no maps.
+- **`SARS-CoV_mutation_heatmap/`** — same tree, different question: *did key spike mutations evolve convergently?* Heatmap encoding, no maps.
+- **`SARS-CoV_analysis_project/`** — the full version, where geographic projection is one of six visual encodings layered on the same tree.
+
+# Session info
+
+```{r sessioninfo, echo=FALSE}
+sessionInfo()
+```

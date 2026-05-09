@@ -1,0 +1,281 @@
+---
+title: "Mutation heatmap — concepts you will use"
+subtitle: "Reshaping a long mutation table, then aligning it to a tree with `gheatmap`"
+author: "Instructor notes"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    fig-width: 9
+    fig-height: 7
+    embed-resources: true
+    theme: cosmo
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+# Render from the project root with:
+#   quarto render notes/concepts.qmd
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+```
+
+```{r packages}
+library(ape)
+library(treeio)
+library(ggtree)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(lubridate)
+library(tibble)
+```
+
+# Why this document exists
+
+This is a self-contained gallery of the techniques you need for the **mutation-heatmap** starter project. Every concept is illustrated with a plot generated from the actual project data. Read it once before you start so you know what the destination looks like; come back to it when `gheatmap` does something unexpected (it will — there is one specific trap that catches every first-time user).
+
+The single question of this starter is: *did key spike mutations evolve convergently across SARS-CoV-2 lineages?* The visual answer is a heatmap aligned to a phylogenetic tree, painted by `ggtree::gheatmap`.
+
+# 1. The tree as a 2-D coordinate system (recap)
+
+A drawn tree has two axes:
+
+- **y-axis** — indexes tips. Each tip has a unique y-coordinate, internal nodes sit at the average of their children's.
+- **x-axis** — substitutions per site or calendar time. For SARS-CoV-2 builds, calendar time.
+
+Once you accept this, **`gheatmap` is just adding extra columns of cells to the right of the tree**, where each cell row sits at a tip's y-coordinate and each cell column is one variable in your matrix. That mental model is enough to use it.
+
+# 2. Loading the data
+
+```{r load_data}
+tree       <- read.tree("data/ncov_subsample.nwk")
+meta       <- read_tsv("data/ncov_metadata.tsv", show_col_types = FALSE)
+spike_long <- read_csv("data/spike_mutations_long.csv", show_col_types = FALSE)
+
+cat("Tips in the tree:        ", length(tree$tip.label), "\n")
+cat("Metadata rows:           ", nrow(meta), "\n")
+cat("Long mutation table rows:", nrow(spike_long), "\n")
+cat("Distinct spike mutations:", length(unique(spike_long$mutation)), "\n")
+```
+
+**Always check the join-key invariant first.** If even one strain name is mangled, every figure that follows is silently wrong.
+
+```{r join_check}
+length(setdiff(tree$tip.label, meta$strain))   # MUST be 0
+length(setdiff(tree$tip.label, spike_long$strain))  # OK to be > 0:
+                                                    # tips with no spike mutations
+                                                    # are missing from the long table
+```
+
+The second number being non-zero is *expected* — a tip with zero observed spike mutations does not appear in the long table. We will fix that later by row-padding the wide matrix.
+
+# 3. The long-format mutation table — what's in it
+
+`data/spike_mutations_long.csv` is **long format**: one row per `(strain, mutation)` pair, restricted to spike (`S:`) substitutions. Each row says "this tip has this spike mutation."
+
+```{r long_head}
+spike_long %>% slice_sample(n = 6)
+```
+
+Reversions (a substitution and its reverse appearing on the same lineage) have already been collapsed for you, so a row in this table really does mean "the tip *carries* this mutation," not just "this mutation appeared somewhere along its lineage."
+
+The most common spike substitutions in this 400-tip sample:
+
+```{r mutation_counts}
+spike_long %>%
+  count(mutation, sort = TRUE) %>%
+  head(15) %>%
+  knitr::kable()
+```
+
+`S:D614G` is in nearly every tip — it fixed globally in early 2020 and never went away. The rest of the top of the list is dominated by Omicron-defining substitutions (`H655Y`, `K417N`, `S477N`, `Q498R`, …).
+
+# 4. Long → wide: `pivot_wider`
+
+`gheatmap` wants a **wide** matrix: rows are tips, columns are mutations, cell values are presence/absence. We start by picking the mutations we care about:
+
+```{r key_muts}
+key_muts <- c("S:D614G", "S:N501Y", "S:E484K", "S:E484A", "S:L452R",
+              "S:T478K", "S:K417N", "S:K417T", "S:P681H", "S:P681R",
+              "S:H655Y")
+```
+
+Then `pivot_wider`:
+
+```{r pivot}
+mut_wide <- spike_long %>%
+  filter(mutation %in% key_muts) %>%
+  mutate(present = "present") %>%
+  pivot_wider(names_from = mutation,
+              values_from = present,
+              values_fill = "absent") %>%
+  column_to_rownames("strain")
+
+dim(mut_wide)
+mut_wide[1:5, 1:5]
+```
+
+Two things to do *immediately* after the pivot, both essential for `gheatmap` to work:
+
+## 4a. Force every `key_mut` to be a column
+
+If a `key_mut` happens to be absent from every tip in the sample, `pivot_wider` silently drops the column. Force every key mutation to appear:
+
+```{r ensure_columns}
+for (m in setdiff(key_muts, colnames(mut_wide))) mut_wide[[m]] <- "absent"
+mut_wide <- mut_wide[, key_muts]   # also enforces a stable column order
+colnames(mut_wide)
+```
+
+## 4b. Force every tip to be a row
+
+Tips with **zero** of our `key_muts` were dropped by the pivot (they have no rows in the long table after the `filter`). They still have to appear in the matrix or `gheatmap` will misalign:
+
+```{r pad_rows}
+missing_tips <- setdiff(tree$tip.label, rownames(mut_wide))
+length(missing_tips)
+
+if (length(missing_tips) > 0) {
+  pad <- as.data.frame(
+    matrix("absent",
+           nrow = length(missing_tips),
+           ncol = ncol(mut_wide),
+           dimnames = list(missing_tips, colnames(mut_wide)))
+  )
+  mut_wide <- rbind(mut_wide, pad)
+}
+
+cat("Wide matrix:", nrow(mut_wide), "rows ×", ncol(mut_wide), "columns\n")
+cat("All tips present as rows?",
+    setequal(rownames(mut_wide), tree$tip.label), "\n")
+```
+
+# 5. The base tree (foundation for the heatmap)
+
+Build a time-calibrated `ggtree` with tip color by clade. The tip color is *not* the answer to the question — its job is to give the heatmap rows clade context so you can read which lineage a row belongs to.
+
+```{r base_tree}
+meta <- meta %>% mutate(decimal_date = decimal_date(ymd(date)))
+
+td <- full_join(as_tibble(tree), meta, by = c("label" = "strain")) %>%
+  as.treedata()
+
+mrsd_value <- max(meta$decimal_date, na.rm = TRUE)
+
+p1 <- ggtree(td, mrsd = mrsd_value, as.Date = TRUE,
+             size = 0.25, color = "grey40") +
+  geom_tippoint(aes(color = Nextstrain_clade), size = 1.1, alpha = 0.85) +
+  scale_color_viridis_d(option = "turbo", name = "Clade",
+                        guide = guide_legend(ncol = 2,
+                                             override.aes = list(size = 3))) +
+  theme_tree2() +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p1
+```
+
+**Branch-units sanity check** — `mrsd` only works if branches are in years:
+
+```{r units}
+max(node.depth.edgelength(tree))   # should be ~6 here
+```
+
+# 6. `gheatmap` — the answer figure
+
+`gheatmap` glues the wide matrix to the right of `p1`. Each cell row sits at a tip's y-coordinate, each column is one mutation, each cell color is `present` or `absent`.
+
+```{r gheatmap, fig.height=9}
+p_heat <- gheatmap(p1, mut_wide,
+                   offset = 50,            # gap between tree and heatmap
+                   width  = 0.6,           # heatmap width relative to tree
+                   colnames_angle = 45,
+                   colnames_offset_y = -2,
+                   font.size = 3) +
+  scale_fill_manual(values = c(present = "firebrick", absent = "grey92"),
+                    name = "Spike mutation") +
+  ggtitle("Convergent vs clonal patterns of spike substitutions")
+
+p_heat
+```
+
+# 7. Reading the heatmap — clonal vs convergent
+
+This is what the figure is *for*. Look down each mutation column:
+
+- **One coherent block of red cells** = the mutation arose once, on a single ancestral branch, and was inherited by every descendant. This is **clonal descent** — boring, but the null hypothesis.
+- **Multiple separated red blocks** at different parts of the tree = the mutation arose **independently** on multiple branches. This is **convergent evolution** — the visual fingerprint of selection acting in parallel.
+
+Examples in this dataset:
+
+```{r convergence_summary, echo=FALSE}
+n_clades_with <- function(mut) {
+  if (!mut %in% colnames(mut_wide)) return(0)
+  tips_with <- rownames(mut_wide)[mut_wide[[mut]] == "present"]
+  length(unique(meta$Nextstrain_clade[meta$strain %in% tips_with]))
+}
+
+tibble(
+  Mutation = key_muts,
+  `Tips carrying it` = vapply(key_muts, function(m) sum(mut_wide[[m]] == "present"), integer(1)),
+  `Distinct clades carrying it` = vapply(key_muts, n_clades_with, integer(1))
+) %>% knitr::kable()
+```
+
+A high value in the third column is a quantitative cousin of "multiple separated blocks" — the mutation has been picked up across many independent clades. Compare a few:
+
+- **`S:D614G`** is in *every* clade after 19A/19B — single block at the top of the tree, then fixed. This is the **near-universal** post-2020 substitution. Visually: one giant red block.
+- **`S:N501Y`** appears in **Alpha (`20I`)**, in **Beta (`20H`)**, and in much of **Omicron (`21K`, `21L`, `22B`, …)**. Visually: multiple separated blocks. This is the textbook convergence pattern.
+- **`S:L452R`** appears in Delta (`21A`/`21I`/`21J`) and again in some Omicron sublineages (e.g. BA.5 / `22B`) — also multiple blocks.
+
+When you write your interpretation, name *specific* mutations and the *specific* lineages where they recur.
+
+# 8. Why row-name alignment is the trap that bites everyone
+
+`gheatmap` aligns the matrix to the tree by **row name**, not row order. Three ways to break this:
+
+1. **Sorting the matrix manually** (e.g. `mut_wide %>% arrange(strain)`). This re-orders rows but `gheatmap` will *still* use row names — so visually nothing changes — but if you accidentally lose row names during the sort (`%>% arrange(rownames(.))` is a recipe for that), the matrix silently misaligns.
+2. **Forgetting to pad missing tips.** Tips with no key mutations are absent from the pivoted matrix → those tips get *no row* in the heatmap and downstream rows shift up one position to fill the gap. The figure looks fine but is wrong.
+3. **Forgetting to force every column.** A `key_mut` absent from the sample → the column doesn't exist → either `gheatmap` errors, or the column ordering shifts and your column labels lie.
+
+The only safe pattern is the one in §4: force columns with the `setdiff` loop, force rows with the `rbind` of an `"absent"` data frame.
+
+# 9. Pitfalls quick-reference
+
+```{r pitfalls, echo=FALSE, results='asis'}
+tab <- tribble(
+  ~Symptom, ~Cause, ~Fix,
+  "Heatmap rows misaligned with tips",
+    "`gheatmap` uses row *names*, not row order; or some tips are missing rows",
+    "Don't sort manually; pad missing tips with all-`absent` rows",
+  "A `key_mut` you expected is missing from the heatmap",
+    "It's absent from every tip in this sample → `pivot_wider` dropped the column",
+    "Force the column: `for (m in setdiff(key_muts, colnames(mut_wide))) mut_wide[[m]] <- 'absent'`",
+  "X-axis on the tree is wrong / labels pre-1900",
+    "Branches in subs/site, not time",
+    "`max(node.depth.edgelength(tree))` must be a few years; otherwise time-calibrate",
+  "Strain join silently drops half the tips",
+    "Strain-name encoding mismatch (`/`, `|`, whitespace)",
+    "Run `setdiff(tree$tip.label, meta$strain)` before joining",
+  "Heatmap looks fine but `gheatmap` warns about Date conversion",
+    "Harmless; ggtree converts the numeric x to Date for the time axis",
+    "Ignore"
+)
+knitr::kable(tab)
+```
+
+# 10. Where to go next
+
+When this project is done, the natural next steps live in sibling directories:
+
+- **`SARS-CoV_clade_waves/`** — same tree, different question: *did clades replace each other through time?* No `gheatmap`; the answer is in tip color alone.
+- **`SARS-CoV_analysis_project/`** — the full version, where `gheatmap` is one of six visual encodings layered on the same tree (tip color, branch color, heatmap, facet strips, MSA, geographic projection).
+
+# Session info
+
+```{r sessioninfo, echo=FALSE}
+sessionInfo()
+```

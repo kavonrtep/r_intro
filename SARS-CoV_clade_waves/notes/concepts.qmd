@@ -1,0 +1,234 @@
+---
+title: "Clade waves — concepts you will use"
+subtitle: "Time-calibrated trees, Nextstrain metadata, and tip color in `ggtree`"
+author: "Instructor notes"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    fig-width: 9
+    fig-height: 6
+    embed-resources: true
+    theme: cosmo
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+# Render from the project root with:
+#   quarto render notes/concepts.qmd
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+```
+
+```{r packages}
+library(ape)
+library(treeio)
+library(ggtree)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(lubridate)
+```
+
+# Why this document exists
+
+This is a small, self-contained gallery of the techniques you need for the **clade-waves** starter project. Every concept is illustrated with a plot generated from the actual project data (`data/ncov_subsample.nwk` + `data/ncov_metadata.tsv`). Read it once before you start so you know what a finished figure looks like; come back to it when you forget which `ggtree` argument controls the time axis.
+
+This starter focuses on a single question: *did SARS-CoV-2 clades replace each other through time?* You only need three tools — a phylogeny, a metadata table, and `geom_tippoint` — but using them correctly is the whole game.
+
+# 1. A phylogenetic tree is a 2-D coordinate system
+
+This is the single most important idea.
+
+A drawn tree has two axes:
+
+- The **y-axis** indexes tips. Internal y-coordinates are the average of the children's y-coordinates. The order is determined by `ladderize()` and is otherwise arbitrary.
+- The **x-axis** carries either **substitutions per site** (the raw output of a tree-builder) or **calendar time** (the output of a clock-calibration step). For SARS-CoV-2 builds, it is calendar time.
+
+Once you accept this, *anything else you draw is just another layer on the same coordinate system*: tip points at `(x_tip, y_tip)`, abundance bars elsewhere, … The whole figure is one big `ggplot`.
+
+# 2. Loading the data
+
+```{r load_data}
+tree <- read.tree("data/ncov_subsample.nwk")
+meta <- read_tsv("data/ncov_metadata.tsv", show_col_types = FALSE)
+
+cat("Tips in the tree:", length(tree$tip.label), "\n")
+cat("Date range:",
+    as.character(min(meta$date)), "→",
+    as.character(max(meta$date)), "\n")
+cat("Distinct Nextstrain clades:", length(unique(meta$Nextstrain_clade)), "\n")
+```
+
+# 3. The join-key invariant — run BEFORE you join
+
+`ggtree` binds metadata to a tree by matching `tree$tip.label` to a `strain` column. If even one strain name is mangled (an extra space, a `/` replaced by `_`), the match silently misaligns and your figure is wrong without warning.
+
+Always run this two-line check first:
+
+```{r join_check}
+# These two should be: the first empty, the second potentially non-empty (fine).
+length(setdiff(tree$tip.label, meta$strain))
+length(setdiff(meta$strain, tree$tip.label))
+```
+
+If the first line is anything other than `0`, **stop and fix the strain naming on both sides** with the same regex before doing anything else.
+
+# 4. Branch length units — verify before plotting on a time axis
+
+`ggtree(td, mrsd = ...)` only works if branches are in **time** (years). If they are in substitutions/site, the time axis labels will be silently wrong.
+
+```{r units_check}
+max(node.depth.edgelength(tree))
+```
+
+Interpretation:
+
+- `≈ 3–6` → branches are in **years** (time-calibrated). You can use `mrsd` directly.
+- `≈ 0.001–0.01` → branches are in **substitutions/site**. You would need to time-calibrate first (not needed here — `data/ncov_subsample.nwk` is in years).
+
+# 5. Nextstrain metadata anatomy — only the columns you need
+
+The metadata file has 21 columns; for this starter you need just five:
+
+```{r meta_anatomy}
+meta %>%
+  select(strain, date, decimal_date, Nextstrain_clade, pango_lineage) %>%
+  slice_sample(n = 6)
+```
+
+| Column            | What it means                                                              |
+|-------------------|----------------------------------------------------------------------------|
+| `strain`          | Join key. Must match `tree$tip.label` exactly.                             |
+| `date`            | Sampling date as `YYYY-MM-DD`.                                             |
+| `decimal_date`    | Same date as a numeric (e.g. `2021.456`). Used as the `mrsd` anchor.       |
+| `Nextstrain_clade`| Coarse-grained lineage label (`19A`, `20I (Alpha)`, `21K (Omicron)`, …).   |
+| `pango_lineage`   | Finer-grained Pango notation (`B.1.1.7`, `BA.1`, `JN.1`, …).               |
+
+A Nextstrain clade is the standard unit of "variant" reporting. The clade column is what you bind to tip color.
+
+```{r clade_counts}
+meta %>%
+  count(Nextstrain_clade, sort = TRUE) %>%
+  head(10)
+```
+
+# 6. The base time-axis tree
+
+Every figure in this project is built on top of this single object.
+
+```{r base_tree}
+meta <- meta %>%
+  mutate(decimal_date = decimal_date(ymd(date)))
+
+td <- full_join(as_tibble(tree), meta, by = c("label" = "strain")) %>%
+  as.treedata()
+
+mrsd_value <- max(meta$decimal_date, na.rm = TRUE)
+
+p_base <- ggtree(td,
+                 mrsd = mrsd_value,
+                 as.Date = TRUE,
+                 size = 0.25,
+                 color = "grey40") +
+  theme_tree2() +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("Foundation: time-calibrated tree, 400 SARS-CoV-2 tips, 2020–2026")
+
+p_base
+```
+
+What the arguments do:
+
+- `mrsd = mrsd_value` — the **most recent sampling date**. `ggtree` subtracts branch lengths from this anchor to place every internal node on the calendar.
+- `as.Date = TRUE` — formats x-axis values as `Date` objects so `scale_x_date` works.
+- `size`, `color` — branch line width and color. Subtle defaults make the tip points stand out later.
+
+# 7. Tip aesthetics — the answer figure
+
+The whole question — "did clades replace each other?" — is answered by adding `geom_tippoint(aes(color = Nextstrain_clade))` to the base tree:
+
+```{r tip_color, fig.height=8}
+p_clade <- p_base +
+  geom_tippoint(aes(color = Nextstrain_clade), size = 1.4, alpha = 0.85) +
+  scale_color_viridis_d(option = "turbo", name = "Clade") +
+  guides(color = guide_legend(override.aes = list(size = 3),
+                              ncol = 2)) +
+  ggtitle("Tips colored by Nextstrain clade — the wave pattern")
+
+p_clade
+```
+
+Read the figure horizontally: tips at the same calendar date are vertically stacked, so a *band of color* at one date means many tips of the same clade at that date. The transitions between bands are the **clade waves** you are being asked to interpret.
+
+Things to notice in this dataset:
+
+- `19A` and `19B` (the original Wuhan-era lineages) sit at the very left of the plot, near 2020.
+- `20I (Alpha)`, `21A (Delta)`, `21J (Delta)` form a left-to-right succession through 2020–2021.
+- The 2022–2023 column is dominated by `22B (BA.5)` and `21L (BA.2)`.
+- The 2024–2026 right edge is `24A (JN.1)`, `25B (NB.1.8.1)`, `25C (XFG)` — Omicron descendants that have moved past the original BA.x.
+
+You should be able to point at *specific transitions on this figure* in your written interpretation.
+
+# 8. Same data, no tree — clade abundance over time
+
+Sometimes the cleanest way to communicate the wave pattern is *without* the tree. A stacked-area plot of clade fraction over time is a frequent companion figure:
+
+```{r clade_area, fig.height=5}
+clade_by_month <- meta %>%
+  mutate(month = floor_date(ymd(date), "month")) %>%
+  count(month, Nextstrain_clade) %>%
+  group_by(month) %>%
+  mutate(fraction = n / sum(n)) %>%
+  ungroup()
+
+ggplot(clade_by_month, aes(x = month, y = fraction, fill = Nextstrain_clade)) +
+  geom_area(position = "stack") +
+  scale_fill_viridis_d(option = "turbo", name = "Clade",
+                       guide = guide_legend(ncol = 2)) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  labs(x = NULL, y = "Fraction of monthly sample",
+       title = "Clade composition by month — the same waves, no tree") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Both figures answer the same question. The tree version preserves *evolutionary* relationships (a viewer can see that BA.5 and JN.1 share an ancestor); the area plot strips that information away to focus on *temporal succession*. Pick whichever makes your interpretation easier to write — or include both.
+
+# 9. Pitfalls quick-reference
+
+```{r pitfalls, echo=FALSE, results='asis'}
+tab <- tribble(
+  ~Symptom, ~Cause, ~Fix,
+  "X-axis labelled in years but events are pre-1900",
+    "Branches in subs/site, not time",
+    "`max(node.depth.edgelength(tree))` should be a few years; otherwise time-calibrate",
+  "Half the tips are NA after joining metadata",
+    "Strain-name encoding mismatch (`/`, `|`, whitespace)",
+    "Run `setdiff(tree$tip.label, meta$strain)` before joining",
+  "Tip color legend is illegible (15+ entries crammed into one column)",
+    "Default `guide_legend()` doesn't wrap",
+    "`guides(color = guide_legend(ncol = 2))`",
+  "Clade colors are visually too similar",
+    "`Set1` / `Dark2` palettes max out around 8 colors",
+    "`scale_color_viridis_d(option = \"turbo\")` handles 15+ categories"
+)
+knitr::kable(tab)
+```
+
+# 10. Where to go next
+
+When this project is done, the natural next steps live in sibling directories:
+
+- **`SARS-CoV_mutation_heatmap/`** — same tree, different question: *did key spike mutations evolve convergently?* You add `gheatmap` to the figure you built here.
+- **`SARS-CoV_analysis_project/`** — the full version, where you layer all six visual encodings (tip color, branch color, heatmap, facet strips, MSA, geographic projection) on the same tree.
+
+Each of these reuses the foundation you build in this starter.
+
+# Session info
+
+```{r sessioninfo, echo=FALSE}
+sessionInfo()
+```
