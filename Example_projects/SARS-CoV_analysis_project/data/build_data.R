@@ -141,7 +141,7 @@ walk_s_muts <- function(node, carried = character()) {
     ref <- substr(m, 1, 1); alt <- substr(m, nchar(m), nchar(m))
     pos <- substr(m, 2, nchar(m) - 1)
     # reversion if the same position is already in carried with alt==current_ref
-    existing <- grep(paste0("^.", pos, "."), here, value = TRUE)
+    existing <- grep(paste0("^.", pos, ""), here, value = TRUE)
     if (length(existing) > 0) {
       here <- setdiff(here, existing)
       if (substr(existing[1], 1, 1) != alt) here <- c(here, paste0(substr(existing[1], 1, 1), pos, alt))

@@ -6,7 +6,7 @@ A small, single-question starter project. The full version is in `SARS-CoV_analy
 
 You are given a time-calibrated phylogeny of 400 SARS-CoV-2 genomes, per-tip metadata including country and `latitude`/`longitude`, and a small per-country COVID-19 case-count snapshot. Your job is to render the same data in two complementary geographic encodings — a country-fill world map and a `phytools::phylo.to.map` projection that connects each tip to its sampling coordinates — and to interpret what they show (and what they hide).
 
-See [`project_description.md`](./project_description.md) for the full framing.
+See [`project_description.md`](project_description.md) for the full framing.
 
 ## Structure
 
@@ -30,4 +30,4 @@ Keep code short, clear, and functional.
 
 ## Where to start
 
-Read [`project_description.md`](./project_description.md) and [`example_prompt.md`](./example_prompt.md), then ask your coding agent to draft an analysis plan from the latter.
+Read [`project_description.md`](project_description.md) and [`example_prompt.md`](example_prompt.md), then ask your coding agent to draft an analysis plan from the latter.

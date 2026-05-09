@@ -6,7 +6,7 @@ A small, single-question starter project. The full version is in `SARS-CoV_analy
 
 You are given a time-calibrated phylogeny of 400 SARS-CoV-2 genomes sampled between January 2020 and April 2026, plus per-tip metadata including the Nextstrain clade and sampling date. Your job is to render a figure that makes the temporal succession of clades visible, and to interpret what it shows.
 
-See [`project_description.md`](./project_description.md) for the full framing.
+See [`project_description.md`](project_description.md) for the full framing.
 
 ## Structure
 
@@ -27,4 +27,4 @@ Keep code short, clear, and functional.
 
 ## Where to start
 
-Read [`project_description.md`](./project_description.md) and [`example_prompt.md`](./example_prompt.md), then ask your coding agent to draft an analysis plan from the latter.
+Read [`project_description.md`](project_description.md) and [`example_prompt.md`](example_prompt.md), then ask your coding agent to draft an analysis plan from the latter.

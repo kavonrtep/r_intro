@@ -6,7 +6,7 @@ A small, single-question starter project. The full version is in `SARS-CoV_analy
 
 You are given a time-calibrated phylogeny of 400 SARS-CoV-2 genomes, per-tip metadata, and a pre-built table of spike-protein amino-acid substitutions for every tip. Your job is to render a heatmap of presence/absence for ~10 well-known spike mutations beside the tree, and to interpret which mutations recur on independent branches (the visual signature of convergent evolution).
 
-See [`project_description.md`](./project_description.md) for the full framing.
+See [`project_description.md`](project_description.md) for the full framing.
 
 ## Structure
 
@@ -28,4 +28,4 @@ Keep code short, clear, and functional.
 
 ## Where to start
 
-Read [`project_description.md`](./project_description.md) and [`example_prompt.md`](./example_prompt.md), then ask your coding agent to draft an analysis plan from the latter.
+Read [`project_description.md`](project_description.md) and [`example_prompt.md`](example_prompt.md), then ask your coding agent to draft an analysis plan from the latter.

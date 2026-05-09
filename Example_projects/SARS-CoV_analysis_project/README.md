@@ -2,7 +2,7 @@
 
 Small educational R project for visualizing a SARS-CoV-2 phylogenetic tree together with rich metadata (clade, lineage, spike mutations, region, host, sampling date). The goal is to teach the six principled visual encodings of phylogenetic metadata in `ggtree` on a real dataset where the biological story is well-known and the failure modes (sampling bias, naive ancestral state reconstruction, branch-unit confusion) are pedagogically valuable.
 
-See [`project_description.md`](./project_description.md) for the full background, hypothesis, and research questions.
+See [`project_description.md`](project_description.md) for the full background, hypothesis, and research questions.
 
 ## Structure
 
@@ -24,7 +24,7 @@ Keep code short, clear, and functional. One script per logical step.
 
 ## Notes
 
-- Data acquisition is documented in [`nextstrain_howto.md`](./nextstrain_howto.md). The expected files are pre-cached in `data/` — do not refetch during analysis.
-- Tooling and editor setup is in [`setup.md`](./setup.md).
-- Agent-specific guidance (project structure, R style, what to avoid) is in [`AGENTS.md`](./AGENTS.md).
-- A worked seed prompt for the coding agent is in [`example_prompt.md`](./example_prompt.md).
+- Data acquisition is documented in [`nextstrain_howto.md`](nextstrain_howto.md). The expected files are pre-cached in `data/` — do not refetch during analysis.
+- Tooling and editor setup is in [`setup.md`](setup.md).
+- Agent-specific guidance (project structure, R style, what to avoid) is in [`AGENTS.md`](AGENTS.md).
+- A worked seed prompt for the coding agent is in [`example_prompt.md`](example_prompt.md).

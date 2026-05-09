@@ -44,7 +44,7 @@ Two pre-cached files distributed with the project, plus one optional alignment:
 - `data/ncov_metadata.tsv` — tab-separated metadata, one row per tip, with at least: `strain`, `date`, `region`, `country`, `division`, `Nextstrain_clade`, `pango_lineage`, `host`, `age`, `sex`, `length`, `latitude`, `longitude`, `nextclade_mutations`.
 - `data/spike_RBD_aligned.fasta` — multiple sequence alignment of the spike RBD (≈230 nt window), tip labels matching `tree$tip.label`. Optional; used in Step 7 only.
 
-Acquisition, format details, and the join-key invariant `setdiff(tree$tip.label, meta$strain)` are documented in [`nextstrain_howto.md`](./nextstrain_howto.md).
+Acquisition, format details, and the join-key invariant `setdiff(tree$tip.label, meta$strain)` are documented in [`nextstrain_howto.md`](nextstrain_howto.md).
 
 ## Research questions
 
