@@ -426,7 +426,9 @@ head(genotype)
 # ---------- SLIDE: Attaching heatmap to the tree ----------
 
 gheatmap(p3, genotype, offset = 8, width = 0.6,
-         colnames = FALSE, legend_title = "genotype") +
+         colnames = TRUE, colnames_position = "top",
+         colnames_angle = 45, hjust = 0,
+         legend_title = "genotype") +
   scale_x_ggtree()
 
 # ---------- SLIDE: pivot_wider for gheatmap ----------
